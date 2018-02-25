@@ -14,5 +14,6 @@ CREATE TABLE IF NOT EXISTS document (
 CREATE TABLE IF NOT EXISTS relation (
     antecedentId UUID NOT NULL REFERENCES document (id) ON DELETE RESTRICT,
     descendantId UUID NOT NULL REFERENCES document (id) ON DELETE RESTRICT,
-    PRIMARY KEY (antecedentId, descendantId)
+    PRIMARY KEY (antecedentId, descendantId),
+    CHECK (antecedentId != descendantId)
 );

@@ -1,0 +1,21 @@
+﻿@model Server.ViewModels.DocumentViewModel
+@using Microsoft.AspNetCore.WebUtilities;
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.Title) ? "Document" : Model.Title;
+}
+<h2>@ViewData["Title"]</h2>
+
+<div id="view">
+    @Html.DisplayFor(m => m.Body)
+</div>
+
+<div id="editor">
+    <form method="post">
+        <p>@Html.EditorFor(m => m.Title)</p>
+        <p>@Html.EditorFor(m => m.Body)</p>
+        @foreach(var sourceId in Model.SourceIds) {
+            <input type="hidden" name="AntecedentIdBase64" value="@WebEncoders.Base64UrlEncode(sourceId)" />
+        }
+        <p><input type="submit" value="Save" /></p>
+    </form>
+</div>

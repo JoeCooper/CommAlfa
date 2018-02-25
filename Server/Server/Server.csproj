@@ -19,6 +19,7 @@
     <Folder Include="Views\Account\" />
     <Folder Include="ViewModels\" />
     <Folder Include="wwwroot\images\" />
+    <Folder Include="Views\Document\" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Setup.sql" />

@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 
 namespace Server.Controllers
 {
+    [Route("account")]
     public class AccountController : Controller
     {
         readonly DatabaseConfiguration databaseConfiguration;
@@ -23,33 +24,20 @@ namespace Server.Controllers
         public AccountController(IOptions<DatabaseConfiguration> _databaseConfiguration) {
             databaseConfiguration = _databaseConfiguration.Value;
         }
-        
-        // GET: /<controller>/
-        public IActionResult Index()
-        {
-            return View();
-        }
 
+        [HttpGet("login")]
         public IActionResult Login(string returnUrl)
         {
             return View(new LoginViewModel());
         }
 
-        class Account {
-            public Account(Guid id, string displayName) {
-                Id = id;
-                DisplayName = displayName;
-            }
-            public Guid Id { get; }
-            public string DisplayName { get; }
-        }
-
-        [HttpGet] public async Task<IActionResult> Logout() {
+        [HttpGet("logout")]
+        public async Task<IActionResult> Logout() {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Redirect("/");
         }
 
-        [HttpPost]
+        [HttpPost("login")]
         public async Task<IActionResult> Login(string returnUrl, LoginSubmission submission) {
             using(var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
             using(var cmd = new NpgsqlCommand()) {
@@ -90,6 +78,7 @@ namespace Server.Controllers
             }
         }
 
+        [HttpGet("register")]
         public IActionResult Register()
         {
             return View(new RegistrationViewModel());
@@ -144,7 +133,7 @@ namespace Server.Controllers
             return digest;
         }
 
-        [HttpPost]
+        [HttpPost("register")]
         public async Task<IActionResult> Register(RegistrationSubmission submission)
         {
             var failureBuilder = ImmutableArray.CreateBuilder<RegistrationFailureReasons>();
