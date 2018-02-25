@@ -1,0 +1,17 @@
+﻿@model Server.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+<h2>@ViewData["Title"]</h2>
+
+<div>
+    <form method="post">
+        <p><input type="text" name="email" placeholder='Email address' /></p>
+        <p><input type="password" name="password" placeholder='Password' /></p>
+        <p><input type="submit" value="Login" /></p>
+    </form>
+    @if(Model.LoginRejected) {
+    <p class='error'>Invalid email or password.</p>
+    }
+    <p>Don't have an account? <a asp-action="Register">Sign up</a>.</p>
+</div>
