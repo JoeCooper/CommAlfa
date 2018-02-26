@@ -37,3 +37,8 @@
         display: none
     }
 }
+
+table.title td {
+    vertical-align: baseline;
+    padding-right:1em;
+}

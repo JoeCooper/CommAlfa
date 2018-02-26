@@ -26,9 +26,9 @@ namespace Server.Controllers
             databaseConfiguration = _databaseConfiguration.Value;
         }
 
-        [HttpPost("{id}")]
+        [HttpPost("{id}/edit")]
         [Authorize]
-        public async Task<IActionResult> Index(string id, DocumentSubmissionModel submissionModel)
+        public async Task<IActionResult> Save(string id, DocumentSubmissionModel submissionModel)
         {
             submissionModel.AntecedentIdBase64 = submissionModel.AntecedentIdBase64 ?? Enumerable.Empty<string>();
             
@@ -121,8 +121,15 @@ namespace Server.Controllers
             return View("Document", new DocumentViewModel(authorId, authorDisplayName));
         }
 
+        [Authorize]
+        [HttpGet("{id}/edit")]
+        public async Task<IActionResult> Edit(string id)
+        {
+            return await GetDocument(id, true);
+        }
+
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetDocument(string id)
+        public async Task<IActionResult> GetDocument(string id, bool edit)
         {
             using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
             {
@@ -169,7 +176,7 @@ namespace Server.Controllers
                         }
                     }
 
-                    return View("Document", viewModel);
+                    return View(edit ? "Edit" : "Document", viewModel);
                 }
 
                 return NotFound();
