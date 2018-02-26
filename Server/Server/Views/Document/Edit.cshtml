@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.WebUtilities;
 <form method="post">
     <table class="title"><tr>
-        <td><h1>@Html.EditorFor(m => m.Title)</h1></td>
+        <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title" } })</h1></td>
         <td class="action"><input type="submit" value="Save" /></td>
     </tr></table>
     <p>@Html.EditorFor(m => m.Body)</p>
