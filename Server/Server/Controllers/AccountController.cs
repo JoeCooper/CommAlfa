@@ -13,6 +13,9 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.Authorization;
+using System.Text;
 
 namespace Server.Controllers
 {
@@ -23,6 +26,70 @@ namespace Server.Controllers
 
         public AccountController(IOptions<DatabaseConfiguration> _databaseConfiguration) {
             databaseConfiguration = _databaseConfiguration.Value;
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> Index() {
+            var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
+            var id = Guid.Parse(nameIdentifierClaim.Value);
+            return await Detail(id);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Detail(string id) {
+            var idInBinary = WebEncoders.Base64UrlDecode(id);
+            var idAsGuid = new Guid(idInBinary);
+            return await Detail(idAsGuid);
+        }
+
+        async Task<IActionResult> Detail(Guid id) {
+            string displayName;
+            string email;
+
+            using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
+            {
+                await conn.OpenAsync();
+
+                using (var cmd = new NpgsqlCommand())
+                {
+                    cmd.Connection = conn;
+                    cmd.CommandText = "SELECT displayName,email FROM account WHERE id=@id;";
+                    cmd.Parameters.AddWithValue("@id", id);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            displayName = reader.GetString(0);
+                            email = reader.GetString(1);
+                        }
+                        else
+                        {
+                            return NotFound();
+                        }
+                    }
+                }
+            }
+
+            string gravatarHash;
+
+            using (var md5Encoder = MD5.Create())
+            {
+                md5Encoder.Initialize();
+                var flattened = email.Trim().ToLower();
+                var buffer = Encoding.UTF8.GetBytes(flattened);
+                var hash = md5Encoder.ComputeHash(buffer);
+                var builder = new StringBuilder();
+                for (var i = 0; i < hash.Length; i++) {
+                    builder.AppendFormat("{0:x2}", hash[i]);
+                }
+                gravatarHash = builder.ToString();
+            }
+
+            var viewModel = new AccountViewModel(id, displayName, gravatarHash, Enumerable.Empty<DocumentListingViewModel>(), false);
+
+            return View("Detail", viewModel);
         }
 
         [HttpGet("login")]

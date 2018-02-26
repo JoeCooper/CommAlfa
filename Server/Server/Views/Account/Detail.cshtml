@@ -1,0 +1,8 @@
+﻿@model Server.ViewModels.AccountViewModel
+@{
+    ViewData["Title"] = "Account";
+}
+<table class="title"><tr>
+    <td><h1>@Html.DisplayFor(m => m.DisplayName)</h1></td>
+    <td><img class="avatar" src="https://www.gravatar.com/avatar/@Model.GravatarHash" /></td>
+</tr></table>

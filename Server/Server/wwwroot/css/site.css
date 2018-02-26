@@ -42,3 +42,7 @@ table.title td {
     vertical-align: baseline;
     padding-right:1em;
 }
+
+img.avatar {
+     border-radius: 50%;
+}
