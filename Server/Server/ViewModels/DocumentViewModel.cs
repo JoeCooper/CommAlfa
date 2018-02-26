@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -42,6 +43,7 @@ namespace Server.ViewModels
 
         public IEnumerable<byte[]> SourceIds { get; }
 
+        [DataType(DataType.MultilineText)]
         public string Body { get; }
 
         public string Title { get; }
