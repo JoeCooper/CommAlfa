@@ -13,12 +13,26 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Security.Cryptography;
+using System.Reflection;
+using System.IO;
 
 namespace Server.Controllers
 {
     [Route("documents")]
     public class DocumentController : Controller
     {
+        readonly static string NewDocumentBody;
+
+        static DocumentController() {
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = "Server.New.md";
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                NewDocumentBody = reader.ReadToEnd();
+            }
+        }
+        
         readonly DatabaseConfiguration databaseConfiguration;
 
         public DocumentController(IOptions<DatabaseConfiguration> _databaseConfiguration)
@@ -112,13 +126,13 @@ namespace Server.Controllers
             return RedirectToAction(nameof(GetDocument), new { id = submissionIdAsBase64 });
         }
 
-        [HttpGet("new")] [Authorize]
+        [HttpGet("new/edit")] [Authorize]
         public IActionResult New()
         {
             var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
             var authorId = Guid.Parse(nameIdentifierClaim.Value);
             var authorDisplayName = User.Identity.Name;
-            return View("Document", new DocumentViewModel(authorId, authorDisplayName));
+            return View("Edit", new DocumentViewModel(Enumerable.Empty<byte[]>(), NewDocumentBody, string.Empty, authorId, DateTime.Now, authorDisplayName));
         }
 
         [Authorize]

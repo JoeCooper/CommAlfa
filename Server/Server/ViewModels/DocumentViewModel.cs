@@ -9,11 +9,6 @@ namespace Server.ViewModels
 {
     public class DocumentViewModel
     {
-        public DocumentViewModel(Guid authorId, string authorDisplayName):
-            this(Enumerable.Empty<byte[]>(), string.Empty, string.Empty, authorId, DateTime.Now, authorDisplayName)
-        {
-        }
-        
         public DocumentViewModel(
             IEnumerable<byte[]> sourceIds,
             string body,

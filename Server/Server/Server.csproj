@@ -24,8 +24,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="Setup.sql" />
+    <None Remove="New.md" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Setup.sql" />
+    <EmbeddedResource Include="New.md" />
   </ItemGroup>
 </Project>
