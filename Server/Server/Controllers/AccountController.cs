@@ -47,6 +47,7 @@ namespace Server.Controllers
             string displayName;
             string email;
             IEnumerable<DocumentListingViewModel> documentListings;
+            IEnumerable<Tuple<Guid, Guid>> boxedRelations;
 
             using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
             {
@@ -72,10 +73,7 @@ namespace Server.Controllers
                     }
                 }
 
-                var documentListingBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
-
                 using (var cmd = new NpgsqlCommand())
-
                 {
                     cmd.Connection = conn;
                     cmd.CommandText = "SELECT id,title,timestamp FROM document WHERE authorId=@authorId;";
@@ -83,6 +81,8 @@ namespace Server.Controllers
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
+                        var documentListingBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
+
                         while (await reader.ReadAsync())
                         {
                             documentListingBuilder.Add(new DocumentListingViewModel(
@@ -94,10 +94,36 @@ namespace Server.Controllers
                                 Enumerable.Empty<byte[]>()
                             ));
                         }
+
+                        documentListings = documentListingBuilder;
                     }
                 }
 
-                documentListings = documentListingBuilder;
+                using(var cmd = new NpgsqlCommand())
+                {
+                    var boxedDocumentIds = documentListings.Select(d => new Guid(d.Id)).ToArray();
+
+                    cmd.Connection = conn;
+                    cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId] <@ @documentIds;";
+                    cmd.Parameters.AddWithValue("@documentIds", boxedDocumentIds);
+
+                    using(var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        var boxedRelationsBuilder = ImmutableArray.CreateBuilder<Tuple<Guid, Guid>>();
+
+                        while(await reader.ReadAsync()) {
+                            boxedRelationsBuilder.Add(new Tuple<Guid, Guid>(reader.GetGuid(0), reader.GetGuid(1)));
+                        }
+
+                        boxedRelations = boxedRelationsBuilder;
+                    }
+                }
+            }
+
+            {
+                var ourDocumentIds = ImmutableHashSet.CreateRange(documentListings.Select(dl => new Guid(dl.Id)));
+                var supercededDocumentIds = ImmutableHashSet.CreateRange(boxedRelations.Where(r => ourDocumentIds.Contains(r.Item2)).Select(r => r.Item1));
+                documentListings = documentListings.Where(dl => supercededDocumentIds.Contains(new Guid(dl.Id)) == false);
             }
 
             string gravatarHash;
@@ -115,9 +141,7 @@ namespace Server.Controllers
                 gravatarHash = builder.ToString();
             }
 
-            var viewModel = new AccountViewModel(accountId, displayName, gravatarHash, documentListings, false);
-
-            return View("Detail", viewModel);
+            return View("Detail", new AccountViewModel(accountId, displayName, gravatarHash, documentListings, false));
         }
 
         [HttpGet("login")]
