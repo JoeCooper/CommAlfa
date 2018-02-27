@@ -1,0 +1,15 @@
+﻿@model Server.ViewModels.DocumentListingViewModel
+@using Microsoft.AspNetCore.WebUtilities;
+@{
+}
+<tr>
+<td>@Html.DisplayFor(m => m.Title)</td>
+<td>@Html.DisplayFor(m => m.Timestamp)</td>
+<td>
+    <a asp-controller="Document"
+            asp-action="GetDocument"
+            asp-route-id="@WebEncoders.Base64UrlEncode(Model.Id)">
+    View
+    </a>
+</td>
+</tr>

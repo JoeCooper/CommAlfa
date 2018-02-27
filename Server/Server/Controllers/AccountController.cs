@@ -43,9 +43,10 @@ namespace Server.Controllers
             return await Detail(idAsGuid);
         }
 
-        async Task<IActionResult> Detail(Guid id) {
+        async Task<IActionResult> Detail(Guid accountId) {
             string displayName;
             string email;
+            IEnumerable<DocumentListingViewModel> documentListings;
 
             using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
             {
@@ -55,7 +56,7 @@ namespace Server.Controllers
                 {
                     cmd.Connection = conn;
                     cmd.CommandText = "SELECT displayName,email FROM account WHERE id=@id;";
-                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.Parameters.AddWithValue("@id", accountId);
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -70,6 +71,33 @@ namespace Server.Controllers
                         }
                     }
                 }
+
+                var documentListingBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
+
+                using (var cmd = new NpgsqlCommand())
+
+                {
+                    cmd.Connection = conn;
+                    cmd.CommandText = "SELECT id,title,timestamp FROM document WHERE authorId=@authorId;";
+                    cmd.Parameters.AddWithValue("@authorId", accountId);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            documentListingBuilder.Add(new DocumentListingViewModel(
+                                reader.GetGuid(0).ToByteArray(),
+                                reader.GetString(1),
+                                displayName,
+                                accountId,
+                                reader.GetDateTime(2),
+                                Enumerable.Empty<byte[]>()
+                            ));
+                        }
+                    }
+                }
+
+                documentListings = documentListingBuilder;
             }
 
             string gravatarHash;
@@ -87,7 +115,7 @@ namespace Server.Controllers
                 gravatarHash = builder.ToString();
             }
 
-            var viewModel = new AccountViewModel(id, displayName, gravatarHash, Enumerable.Empty<DocumentListingViewModel>(), false);
+            var viewModel = new AccountViewModel(accountId, displayName, gravatarHash, documentListings, false);
 
             return View("Detail", viewModel);
         }

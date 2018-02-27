@@ -5,26 +5,27 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Setup.sql" />
+    <None Remove="New.md" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
     <PackageReference Include="Npgsql" Version="3.2.6" />
     <PackageReference Include="EmailValidation" Version="1.0.3" />
     <PackageReference Include="Markdown" Version="2.2.1" />
   </ItemGroup>
-
   <ItemGroup>
-    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.0" />
+    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools">
+      <Version>2.0.0</Version>
+    </DotNetCliToolReference>
   </ItemGroup>
-
   <ItemGroup>
     <Folder Include="Views\Account\" />
     <Folder Include="ViewModels\" />
     <Folder Include="wwwroot\images\" />
     <Folder Include="Views\Document\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="Setup.sql" />
-    <None Remove="New.md" />
+    <Folder Include="Views\Account\DisplayTemplates\" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Setup.sql" />
