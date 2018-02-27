@@ -5,6 +5,7 @@
         EmailIsInvalid,
         EmailIsInUse,
         PasswordIsInadequate,
-        DisplayNameIsBlank
+        DisplayNameIsBlank,
+        CaptchaFail
     }
 }

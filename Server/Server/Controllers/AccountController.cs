@@ -16,6 +16,9 @@ using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Authorization;
 using System.Text;
+using System.Net;
+using System.Collections.Specialized;
+using System.Net.Http;
 
 namespace Server.Controllers
 {
@@ -23,9 +26,11 @@ namespace Server.Controllers
     public class AccountController : Controller
     {
         readonly DatabaseConfiguration databaseConfiguration;
+        readonly RecaptchaConfiguration recaptchaConfiguration;
 
-        public AccountController(IOptions<DatabaseConfiguration> _databaseConfiguration) {
+        public AccountController(IOptions<DatabaseConfiguration> _databaseConfiguration, IOptions<RecaptchaConfiguration> _recaptchaConfiguration) {
             databaseConfiguration = _databaseConfiguration.Value;
+            recaptchaConfiguration = _recaptchaConfiguration.Value;
         }
 
         [HttpGet]
@@ -199,7 +204,12 @@ namespace Server.Controllers
         [HttpGet("register")]
         public IActionResult Register()
         {
-            return View(new RegistrationViewModel());
+            var viewModel = new RegistrationViewModel();
+            if(recaptchaConfiguration.HasConfiguration)
+            {
+                viewModel = viewModel.WithRecaptchaSiteKey(recaptchaConfiguration.SiteKey);
+            }
+            return View(viewModel);
         }
 
         static bool EvaluatePassword(string password, byte[] extantDigest) {
@@ -264,6 +274,26 @@ namespace Server.Controllers
             if(VetDisplayName(submission.DisplayName) == false) {
                 failureBuilder.Add(RegistrationFailureReasons.DisplayNameIsBlank);
             }
+            if (recaptchaConfiguration.HasConfiguration && string.IsNullOrWhiteSpace(submission.RecaptchaResponse))
+            {
+                failureBuilder.Add(RegistrationFailureReasons.CaptchaFail);
+            }
+            if (recaptchaConfiguration.HasConfiguration && !string.IsNullOrWhiteSpace(submission.RecaptchaResponse) && failureBuilder.Any() == false)
+            {
+                using(var httpClient = new HttpClient()) {
+                    var recaptchaUrl = new Uri("https://www.google.com/recaptcha/api/siteverify");
+                    var requestBody = new[] {
+                        new KeyValuePair<string,string>("secret", recaptchaConfiguration.SecretKey),
+                        new KeyValuePair<string, string>("response", submission.RecaptchaResponse)
+                    };
+                    var response = await httpClient.PostAsync(recaptchaUrl, new FormUrlEncodedContent(requestBody));
+                    var rawResponseBody = await response.Content.ReadAsStringAsync();
+                    var recaptchaResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<RecaptchaResponse>(rawResponseBody);
+                    if(recaptchaResponse.Success == false) {
+                        failureBuilder.Add(RegistrationFailureReasons.CaptchaFail);
+                    }
+                }
+            }
             if(failureBuilder.Any() == false) {
                 using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
                 using (var cmd = new NpgsqlCommand())
@@ -289,14 +319,19 @@ namespace Server.Controllers
                 }
             }
             if(failureBuilder.Any()) {
-                return View(new RegistrationViewModel(failureBuilder));
+                var viewModel = new RegistrationViewModel(submission.DisplayName ?? string.Empty, submission.Password ?? string.Empty, failureBuilder);
+                if (recaptchaConfiguration.HasConfiguration)
+                {
+                    viewModel = viewModel.WithRecaptchaSiteKey(recaptchaConfiguration.SiteKey);
+                }
+                return View(viewModel);
             }
             return RedirectToAction(nameof(Login));
         }
 
         static bool VetEmail(string email)
         {
-            return EmailValidation.EmailValidator.Validate(email);
+            return !string.IsNullOrWhiteSpace(email) && EmailValidation.EmailValidator.Validate(email);
         }
 
         static bool VetDisplayName(string displayName)
@@ -306,7 +341,7 @@ namespace Server.Controllers
 
         static bool VetPassword(string password)
         {
-            return password.Length >= 6;
+            return !string.IsNullOrWhiteSpace(password) && password.Length >= 6;
         }
     }
 }

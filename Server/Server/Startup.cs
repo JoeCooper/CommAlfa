@@ -32,6 +32,11 @@ namespace Server
             services.Configure<DatabaseConfiguration>(options => {
                 options.ConnectionString = Environment.GetEnvironmentVariable("POSTGRES_URL");
             });
+
+            services.Configure<RecaptchaConfiguration>(options => {
+                options.SecretKey = Environment.GetEnvironmentVariable("RECAPTCHA_SECRETKEY");
+                options.SiteKey = Environment.GetEnvironmentVariable("RECAPTCHA_SITEKEY");
+            });
             
             services.AddMvc();
 

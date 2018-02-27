@@ -3,23 +3,27 @@
     ViewData["Title"] = "Sign Up";
 }
 <h2>Sign Up</h2>
-<div>
-    <form asp-action="Register" method="post">
-        <p><input type="text" name="displayName" placeholder='Your name as it will appear' /></p>
-        <p><input type="text" name="username" placeholder='Email address' /></p>
+<form asp-action="Register" method="post">
+    <div>
+        <p>@Html.EditorFor(m => m.DisplayName, new { htmlAttributes = new { placeholder = "Your name as it will appear" } })</p>
+        @if(Model.Reasons.Contains(RegistrationFailureReasons.DisplayNameIsBlank)) {
+            <p class='error'>Please enter a non-empty display name.</p>
+        }
+        <p>@Html.EditorFor(m => m.Username, new { htmlAttributes = new { placeholder = "Email address" } })</p>
+        @if(Model.Reasons.Contains(RegistrationFailureReasons.EmailIsInvalid)) {
+            <p class='error'>Invalid email.</p>
+        }
+        @if(Model.Reasons.Contains(RegistrationFailureReasons.EmailIsInUse)) {
+            <p class='error'>This email is already in use.</p>
+        }
         <p><input type="password" name="password" placeholder='Password' /></p>
+        @if(Model.Reasons.Contains(RegistrationFailureReasons.PasswordIsInadequate)) {
+            <p class='error'>Password must be at least six characters in length.</p>
+        }
+        <div class="g-recaptcha" data-sitekey="@(Model.RecaptchaSiteKey)"></div>
+        @if(Model.Reasons.Contains(RegistrationFailureReasons.CaptchaFail)) {
+            <p class='error'>You must correctly pass the CAPTCHA.</p>
+        }
         <p><input type="submit" value="Sign Up" /></p>
-    </form>
-    @if(Model.Reasons.Contains(RegistrationFailureReasons.DisplayNameIsBlank)) {
-        <p class='error'>Please enter a non-empty display name.</p>
-    }
-    @if(Model.Reasons.Contains(RegistrationFailureReasons.EmailIsInvalid)) {
-        <p class='error'>Invalid email.</p>
-    }
-    @if(Model.Reasons.Contains(RegistrationFailureReasons.EmailIsInUse)) {
-        <p class='error'>This email is already in use.</p>
-    }
-    @if(Model.Reasons.Contains(RegistrationFailureReasons.PasswordIsInadequate)) {
-        <p class='error'>Password must be at least six characters in length.</p>
-    }
-</div>
+    </div>
+</form>
