@@ -20,9 +20,11 @@
         @if(Model.Reasons.Contains(RegistrationFailureReasons.PasswordIsInadequate)) {
             <p class='error'>Password must be at least six characters in length.</p>
         }
-        <div class="g-recaptcha" data-sitekey="@(Model.RecaptchaSiteKey)"></div>
-        @if(Model.Reasons.Contains(RegistrationFailureReasons.CaptchaFail)) {
-            <p class='error'>You must correctly pass the CAPTCHA.</p>
+        @if(Model.UseRecaptcha) {
+            <div class="g-recaptcha" data-sitekey="@(Model.RecaptchaSiteKey)"></div>
+            if(Model.Reasons.Contains(RegistrationFailureReasons.CaptchaFail)) {
+                <p class='error'>You must correctly pass the CAPTCHA.</p>
+            }
         }
         <p><input type="submit" value="Sign Up" /></p>
     </div>
