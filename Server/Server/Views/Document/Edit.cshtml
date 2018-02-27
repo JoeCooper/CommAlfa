@@ -10,7 +10,9 @@
         <input type="hidden" name="AntecedentIdBase64" value="@WebEncoders.Base64UrlEncode(sourceId)" />
     }
 </form>
+@section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js"></script>
 <script>
     var inscrybmde = new InscrybMDE({ element: document.getElementById("Body") });
 </script>
+}
