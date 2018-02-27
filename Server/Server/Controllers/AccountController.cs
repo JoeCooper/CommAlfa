@@ -162,7 +162,7 @@ namespace Server.Controllers
                 await conn.OpenAsync();
                 cmd.Connection = conn;
                 cmd.CommandText = "SELECT id,displayName,password_digest FROM account WHERE email=@email;";
-                cmd.Parameters.AddWithValue("@email", submission.Email ?? string.Empty);
+                cmd.Parameters.AddWithValue("@email", submission.Username ?? string.Empty);
                 using(var reader = await cmd.ExecuteReaderAsync()) {
                     Account account = null;
                     if(await reader.ReadAsync()) {
@@ -255,7 +255,7 @@ namespace Server.Controllers
         public async Task<IActionResult> Register(RegistrationSubmission submission)
         {
             var failureBuilder = ImmutableArray.CreateBuilder<RegistrationFailureReasons>();
-            if(VetEmail(submission.Email) == false) {
+            if(VetEmail(submission.Username) == false) {
                 failureBuilder.Add(RegistrationFailureReasons.EmailIsInvalid);
             }
             if(VetPassword(submission.Password) == false) {
@@ -273,7 +273,7 @@ namespace Server.Controllers
                     cmd.CommandText = "INSERT INTO account(id,displayName,email,password_digest) values(@guid,@displayName,@email,@password_digest)";
                     cmd.Parameters.AddWithValue("@guid", Guid.NewGuid());
                     cmd.Parameters.AddWithValue("@displayName", submission.DisplayName ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@email", submission.Email ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@email", submission.Username ?? string.Empty);
                     cmd.Parameters.AddWithValue("@password_digest", GetPasswordDigest(submission.Password ?? string.Empty));
                     try {
                         await cmd.ExecuteNonQueryAsync();
