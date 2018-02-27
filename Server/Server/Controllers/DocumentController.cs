@@ -142,6 +142,112 @@ namespace Server.Controllers
             return await GetDocument(id, true);
         }
 
+        [HttpGet("{id}/history")]
+        public async Task<IActionResult> GetHistory(string id)
+        {
+            var idInBinary = WebEncoders.Base64UrlDecode(id);
+            var idBoxedInGuidForDatabase = new Guid(idInBinary);
+
+            IEnumerable<DocumentListingViewModel> documentsInFamily;
+            IEnumerable<Relation> relations;
+            IImmutableDictionary<Guid, string> authorNames;
+
+            using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
+            {
+                await conn.OpenAsync();
+
+                var relationsBuilder = ImmutableHashSet.CreateBuilder<Relation>();
+                var closedSet = ImmutableHashSet.CreateBuilder<Guid>();
+                var openSet = ImmutableHashSet.CreateBuilder<Guid>();
+
+                openSet.Add(idBoxedInGuidForDatabase);
+
+                while(openSet.Count > 0)
+                {
+                    closedSet.UnionWith(openSet);
+                    var openSetAsArray = openSet.ToArray();
+                    openSet.Clear();
+
+                    using(var cmd = new NpgsqlCommand())
+                    {
+                        cmd.Connection = conn;
+                        cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId, descendantId] && @openSet;";
+                        cmd.Parameters.AddWithValue("@openSet", openSetAsArray);
+
+                        using(var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while(await reader.ReadAsync())
+                            {
+                                var alfa = reader.GetGuid(0);
+                                var bravo = reader.GetGuid(1);
+                                openSet.Add(alfa);
+                                openSet.Add(bravo);
+                                relationsBuilder.Add(new Relation(alfa.ToByteArray(), bravo.ToByteArray()));
+                            }
+                        }
+                    }
+
+                    openSet.ExceptWith(closedSet);
+                }
+
+                relations = relationsBuilder;
+
+                using (var cmd = new NpgsqlCommand())
+                {
+                    var closedSetAsArray = closedSet.ToArray();
+                    
+                    cmd.Connection = conn;
+                    cmd.CommandText = "SELECT id, title, authorId, timestamp FROM document WHERE ARRAY[id] && @closedSet;";
+                    cmd.Parameters.AddWithValue("@closedSet", closedSetAsArray);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        var documentsBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
+
+                        while (await reader.ReadAsync())
+                        {
+                            documentsBuilder.Add(
+                                new DocumentListingViewModel(
+                                    reader.GetGuid(0).ToByteArray(),
+                                    reader.GetString(1),
+                                    reader.GetGuid(2),
+                                    reader.GetDateTime(3)
+                                )
+                            );
+                        }
+
+                        documentsInFamily = documentsBuilder;
+                    }
+                }
+
+                using (var cmd = new NpgsqlCommand())
+                {
+                    var authorNamesBuilder = ImmutableDictionary.CreateBuilder<Guid, string>();
+                    var authorIdsAsArray = ImmutableHashSet.CreateRange(documentsInFamily.Select(d => d.AuthorId)).ToArray();
+
+                    cmd.Connection = conn;
+                    cmd.CommandText = "SELECT id, displayName FROM account WHERE ARRAY[id] && @authorIds;";
+                    cmd.Parameters.AddWithValue("@authorIds", authorIdsAsArray);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            authorNamesBuilder[reader.GetGuid(0)] = reader.GetString(1);
+                        }
+                    }
+
+                    authorNames = authorNamesBuilder.ToImmutable();
+                }
+            }
+
+            documentsInFamily = documentsInFamily.Select(d => d.WithAuthorDisplayName(authorNames[d.AuthorId]));
+
+            var subject = documentsInFamily.Single(d => d.Id.SequenceEqual(idInBinary));
+
+            return View("History", new HistoryViewModel(subject, relations, documentsInFamily));
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDocument(string id, bool edit)
         {

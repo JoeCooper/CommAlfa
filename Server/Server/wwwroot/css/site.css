@@ -46,3 +46,22 @@ table.title td {
 img.avatar {
      border-radius: 50%;
 }
+div#viewport {
+    width: 960px;
+    height: 300px;
+}
+/*canvas {
+    height: 100vh;
+    width: 100vw;
+    display: block
+}*/
+
+    div#viewport  .links line {
+        stroke: #999;
+        stroke-opacity: 0.6
+    }
+
+    div#viewport .nodes circle {
+        stroke: #fff;
+        stroke-width: 1.5px
+    }

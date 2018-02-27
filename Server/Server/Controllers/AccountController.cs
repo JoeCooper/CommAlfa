@@ -90,8 +90,7 @@ namespace Server.Controllers
                                 reader.GetString(1),
                                 displayName,
                                 accountId,
-                                reader.GetDateTime(2),
-                                Enumerable.Empty<byte[]>()
+                                reader.GetDateTime(2)
                             ));
                         }
 

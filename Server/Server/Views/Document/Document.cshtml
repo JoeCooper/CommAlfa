@@ -2,7 +2,7 @@
 @using HeyRed.MarkdownSharp;
 <table class="title"><tr>
     <td><h1>@Html.DisplayFor(m => m.Title)</h1></td>
-    <td><a asp-action="Edit">Edit</a>
-    </td>
+    <td><a asp-action="Edit">Edit</a></td>
+    <td><a asp-action="GetHistory">History</a></td>
 </tr></table>
 @Html.Raw((new Markdown().Transform(Model.Body)))
