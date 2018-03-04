@@ -45,31 +45,42 @@ table#history {
     border-spacing: 0
 }
 
-table#history th {
-    padding-right: 1em
-}
-table#history path {
-    stroke: black;
-    stroke-width: 0.1;
-    fill: none
-}
-table#history circle {
-    stroke: black;
-    fill: black;
-    stroke-width: 0.1
-}
-table#history circle.here {
-    fill: #ffee11
-}
-table#history rect.even {
-    fill: #ddd
-}
-table#history rect.odd {
-    fill: #FFF
-}
-table#history tr:nth-child(even) {
-    background: #ddd
-}
-table#history tr:nth-child(odd) {
-    background: #FFF
-}
+    table#history path {
+        stroke: black;
+        stroke-width: 0.1;
+        fill: none
+    }
+
+    table#history circle {
+        stroke: black;
+        fill: black;
+        stroke-width: 0.1
+    }
+
+        table#history circle.here {
+            fill: #ffee11
+        }
+
+    table#history rect.even {
+        fill: #fafafa
+    }
+
+    table#history rect.odd {
+        fill: #FFF
+    }
+
+    table#history td div.even {
+        background: #fafafa
+    }
+
+    table#history td div.odd {
+        background: #FFF
+    }
+
+    table#history td div {
+        padding-right: 1em
+    }
+
+    table#history td {
+        vertical-align: top
+    }

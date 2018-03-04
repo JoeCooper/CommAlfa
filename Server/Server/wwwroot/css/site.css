@@ -64,15 +64,15 @@ table#history circle {
 table#history circle.here {
     fill: #ffee11;
 }
-    table#history rect.even {
-        fill: #fafafa;
-    }
+table#history rect.even {
+    fill: #fafafa;
+}
 table#history rect.odd {
     fill: #FFF
 }
-    table#history td div.even {
-        background: #fafafa
-    }
+table#history td div.even {
+    background: #fafafa
+}
 table#history td div.odd {
     background: #FFF;
 }
