@@ -151,6 +151,7 @@ namespace Server.Controllers
             IEnumerable<DocumentListingViewModel> documentsInFamily;
             IEnumerable<Relation> relations;
             IImmutableDictionary<Guid, string> authorNames;
+            IEnumerable<AccountListingViewModel> contributors;
 
             using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
             {
@@ -222,6 +223,7 @@ namespace Server.Controllers
 
                 using (var cmd = new NpgsqlCommand())
                 {
+                    var contributorsBuilder = ImmutableArray.CreateBuilder<AccountListingViewModel>();
                     var authorNamesBuilder = ImmutableDictionary.CreateBuilder<Guid, string>();
                     var authorIdsAsArray = ImmutableHashSet.CreateRange(documentsInFamily.Select(d => d.AuthorId)).ToArray();
 
