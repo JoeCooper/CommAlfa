@@ -68,16 +68,15 @@
         var authorDisplayName = Model.DocumentsInFamily.First(d => d.AuthorId.Equals(authorId)).AuthorDisplayName;
         var laneCount = lanes.Count(l => l.AuthorId.Equals(authorId));
         <tr>
-            <th rowspan="@laneCount.ToString()">@HtmlEncoder.Default.Encode(authorDisplayName)</th>
+            <th style="height:@(laneCount)em">@HtmlEncoder.Default.Encode(authorDisplayName)</th>
             @if(isFirstRow) {
                 isFirstRow = false;
-                <td rowspan="@(lanes.Count.ToString())">
-                    <svg width="@(documentCount.ToString())em" height="@(lanes.Count.ToString())em"
-                    viewBox="0 0 @(documentCount.ToString()) @(lanes.Count.ToString())">
+                <td rowspan="@(authorIds.Count())">
+                    <svg width="@(documentCount)em" height="@(lanes.Count)em" viewBox="0 0 @(documentCount) @(lanes.Count)">
                         @foreach(var c in coords) {
                             <circle
-                                cx="@(c.Value.Item1.ToString())"
-                                cy="@(c.Value.Item2.ToString())"
+                                cx="@(c.Value.Item1)"
+                                cy="@(c.Value.Item2)"
                                 r="0.25" />
                         }
                         @foreach(var r in Model.Relations) {

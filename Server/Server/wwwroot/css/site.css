@@ -52,10 +52,9 @@ table#history {
     border-spacing: 0;
 }
 table#history th {
-    height:1em;
     padding-right:1em;
 }
-table#history line, table#history path {
+table#history path {
     stroke: black;
     stroke-width: 0.1;
     fill:none;
