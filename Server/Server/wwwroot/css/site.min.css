@@ -40,12 +40,22 @@ img.avatar {
     border-radius: 50%;
 }
 
-div#viewport .links line {
-    stroke: #999;
-    stroke-opacity: 0.6
+table#history {
+    border-collapse: collapse;
+    border-spacing: 0
 }
 
-div#viewport .nodes circle {
-    stroke: #fff;
-    stroke-width: 1.5px
+table#history th {
+    height: 1em;
+    padding-right: 1em
+}
+
+table#history path {
+    stroke: black;
+    stroke-width: 0.1;
+    fill: none
+}
+
+table#history circle {
+    fill: black
 }

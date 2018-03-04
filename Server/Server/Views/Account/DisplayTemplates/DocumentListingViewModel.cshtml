@@ -8,7 +8,7 @@
 <td>
     <a asp-controller="Document"
             asp-action="GetDocument"
-            asp-route-id="@WebEncoders.Base64UrlEncode(Model.Id)">
+            asp-route-id="@(Model.Id.ToString())">
     View
     </a>
 </td>

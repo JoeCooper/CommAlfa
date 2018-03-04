@@ -11,15 +11,15 @@ namespace Server.Models
     {
         readonly int hashCode;
         
-        public Relation(byte[] antecedentId, byte[] descendantId)
+        public Relation(MD5Sum antecedentId, MD5Sum descendantId)
         {
             AntecedentId = antecedentId;
             DescendantId = descendantId;
             hashCode = antecedentId.GetHashCode() ^ descendantId.GetHashCode();
         }
 
-        public byte[] AntecedentId { get; }
-        public byte[] DescendantId { get; }
+        public MD5Sum AntecedentId { get; }
+        public MD5Sum DescendantId { get; }
 
         public override int GetHashCode()
         {
@@ -28,7 +28,7 @@ namespace Server.Models
 
         public override bool Equals(object obj)
         {
-            if(obj is Relation)
+            if (obj is Relation)
             {
                 var other = (Relation)obj;
                 return AntecedentId.Equals(other.AntecedentId) && DescendantId.Equals(other.DescendantId);

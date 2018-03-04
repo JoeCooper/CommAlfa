@@ -91,7 +91,7 @@ namespace Server.Controllers
                         while (await reader.ReadAsync())
                         {
                             documentListingBuilder.Add(new DocumentListingViewModel(
-                                reader.GetGuid(0).ToByteArray(),
+                                new MD5Sum(reader.GetGuid(0).ToByteArray()),
                                 reader.GetString(1),
                                 displayName,
                                 accountId,
@@ -105,7 +105,7 @@ namespace Server.Controllers
 
                 using(var cmd = new NpgsqlCommand())
                 {
-                    var boxedDocumentIds = documentListings.Select(d => new Guid(d.Id)).ToArray();
+                    var boxedDocumentIds = documentListings.Select(d => d.Id.ToGuid()).ToArray();
 
                     cmd.Connection = conn;
                     cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId] <@ @documentIds;";
@@ -125,9 +125,9 @@ namespace Server.Controllers
             }
 
             {
-                var ourDocumentIds = ImmutableHashSet.CreateRange(documentListings.Select(dl => new Guid(dl.Id)));
+                var ourDocumentIds = ImmutableHashSet.CreateRange(documentListings.Select(dl => dl.Id.ToGuid()));
                 var supercededDocumentIds = ImmutableHashSet.CreateRange(boxedRelations.Where(r => ourDocumentIds.Contains(r.Item2)).Select(r => r.Item1));
-                documentListings = documentListings.Where(dl => supercededDocumentIds.Contains(new Guid(dl.Id)) == false);
+                documentListings = documentListings.Where(dl => supercededDocumentIds.Contains(dl.Id.ToGuid()) == false);
             }
 
             string gravatarHash;

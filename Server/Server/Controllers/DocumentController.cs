@@ -182,7 +182,7 @@ namespace Server.Controllers
                                 var bravo = reader.GetGuid(1);
                                 openSet.Add(alfa);
                                 openSet.Add(bravo);
-                                relationsBuilder.Add(new Relation(alfa.ToByteArray(), bravo.ToByteArray()));
+                                relationsBuilder.Add(new Relation(new MD5Sum(alfa.ToByteArray()), new MD5Sum(bravo.ToByteArray())));
                             }
                         }
                     }
@@ -208,7 +208,7 @@ namespace Server.Controllers
                         {
                             documentsBuilder.Add(
                                 new DocumentListingViewModel(
-                                    reader.GetGuid(0).ToByteArray(),
+                                    new MD5Sum(reader.GetGuid(0).ToByteArray()),
                                     reader.GetString(1),
                                     reader.GetGuid(2),
                                     reader.GetDateTime(3)
@@ -243,7 +243,7 @@ namespace Server.Controllers
 
             documentsInFamily = documentsInFamily.Select(d => d.WithAuthorDisplayName(authorNames[d.AuthorId]));
 
-            var subject = documentsInFamily.Single(d => d.Id.SequenceEqual(idInBinary));
+            var subject = documentsInFamily.Single(d => d.Id.Equals(idInBinary));
 
             return View("History", new HistoryViewModel(subject, relations, documentsInFamily));
         }
