@@ -60,5 +60,10 @@ table#history path {
     fill:none;
 }
 table#history circle {
-    fill:black;
+    stroke: black;
+    fill: black;
+    stroke-width: 0.1;
+}
+table#history circle.here {
+    fill: #ffee11;
 }
