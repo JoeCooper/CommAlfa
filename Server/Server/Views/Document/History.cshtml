@@ -55,7 +55,7 @@
         }
     }
 
-    var isFirstRow = true;
+    const double rowHeightEm = 1.2;
 }
 <table class="title"><tr>
     <td><h1>@Html.DisplayFor(m => m.Title)</h1></td>
@@ -63,32 +63,46 @@
     </td>
 </tr></table>
 <h2>History</h2>
-<table id="history">
-    @foreach(var authorId in authorIds) {
-        var authorDisplayName = Model.DocumentsInFamily.First(d => d.AuthorId.Equals(authorId)).AuthorDisplayName;
-        var laneCount = lanes.Count(l => l.AuthorId.Equals(authorId));
-        <tr>
-            <th style="height:@(laneCount)em">@HtmlEncoder.Default.Encode(authorDisplayName)</th>
-            @if(isFirstRow) {
-                isFirstRow = false;
-                <td rowspan="@(authorIds.Count())">
-                    <svg width="@(documentCount)em" height="@(lanes.Count)em" viewBox="0 0 @(documentCount) @(lanes.Count)">
-                        @foreach(var r in Model.Relations) {
-                            var alfa = coords[r.AntecedentId];
-                            var bravo = coords[r.DescendantId];
-  <path d="M @alfa.Item1 @alfa.Item2 C @(alfa.Item1+1) @alfa.Item2, @(bravo.Item1-1) @bravo.Item2 @bravo.Item1 @bravo.Item2" />
-                          }
-                        @foreach(var c in coords) {
-                            <circle class='@(c.Key.Equals(Model.Id) ? "here" : string.Empty)'
-                                cx="@(c.Value.Item1)"
-                                cy="@(c.Value.Item2)"
-                                r="0.25" />
-                        }
-                    </svg>
-                </td>
+<table id="history"><tr>
+    <td>
+        @{{
+            var i = 0;
+            foreach(var authorId in authorIds) {
+                var c = ((i/2)*2 == i) ? "even" : "odd";
+                i++;
+                var authorDisplayName = Model.DocumentsInFamily.First(d => d.AuthorId.Equals(authorId)).AuthorDisplayName;
+                var laneCount = lanes.Count(l => l.AuthorId.Equals(authorId));
+                <div class='@(c)' style="height:@(laneCount*rowHeightEm)em;line-height:@(rowHeightEm)">
+                    @HtmlEncoder.Default.Encode(authorDisplayName)
+                </div>           
             }
-        </tr>
-    }
-</table>
+        }}
+    </td>
+    <td>
+        <svg width="@(documentCount*rowHeightEm)em" height="@(lanes.Count*rowHeightEm)em" viewBox="0 0 @(documentCount) @(lanes.Count)">
+            @{
+                var rowOffsetAccumulator = 0;
+                for(var i = 0; i < authorIds.Count(); i++) {
+                    var a = authorIds.ElementAt(i);
+                    var c = ((i/2)*2 == i) ? "even" : "odd";
+                    var h = lanes.Count(l => l.AuthorId.Equals(a));
+                    rowOffsetAccumulator += h;
+                    <rect width="@(documentCount)" y='@(rowOffsetAccumulator-h)' height="@(h)" class="@(c)" />
+                }
+            }
+            @foreach(var r in Model.Relations) {
+                var alfa = coords[r.AntecedentId];
+                var bravo = coords[r.DescendantId];
+                <path d="M @alfa.Item1 @alfa.Item2 C @(alfa.Item1+1) @alfa.Item2, @(bravo.Item1-1) @bravo.Item2 @bravo.Item1 @bravo.Item2" />
+            }
+            @foreach(var c in coords) {
+                <circle class='@(c.Key.Equals(Model.Id) ? "here" : string.Empty)'
+                    cx="@(c.Value.Item1)"
+                    cy="@(c.Value.Item2)"
+                    r="0.25" />
+            }
+        </svg>
+    </td>
+</tr></table>
 @section scripts {
 }

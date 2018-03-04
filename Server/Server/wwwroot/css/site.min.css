@@ -48,13 +48,28 @@ table#history {
 table#history th {
     padding-right: 1em
 }
-
 table#history path {
     stroke: black;
     stroke-width: 0.1;
     fill: none
 }
-
 table#history circle {
-    fill: black
+    stroke: black;
+    fill: black;
+    stroke-width: 0.1
+}
+table#history circle.here {
+    fill: #ffee11
+}
+table#history rect.even {
+    fill: #ddd
+}
+table#history rect.odd {
+    fill: #FFF
+}
+table#history tr:nth-child(even) {
+    background: #ddd
+}
+table#history tr:nth-child(odd) {
+    background: #FFF
 }
