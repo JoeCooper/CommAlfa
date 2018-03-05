@@ -4,5 +4,11 @@
     <td><h1>@Html.DisplayFor(m => m.Title)</h1></td>
     <td><a asp-action="Edit">Edit</a></td>
     <td><a asp-action="GetHistory">History</a></td>
-</tr></table>
+</tr>
+    <tr><td colspan="2">
+    Saved by @Html.DisplayFor(m => m.AuthorDisplayName)
+   on @Html.DisplayFor(m => m.Timestamp)
+    </td></tr>
+</table>
+<hr />
 @Html.Raw((new Markdown().Transform(Model.Body)))
