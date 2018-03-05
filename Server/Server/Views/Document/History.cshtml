@@ -89,7 +89,8 @@
         }}
     </td>
     <td>
-        <svg width="@(documentCount*rowHeightEm)em" height="@(lanes.Count*rowHeightEm)em" viewBox="0 0 @(documentCount) @(lanes.Count)">
+        <svg width="@(documentCount*rowHeightEm)em" height="@(lanes.Count*rowHeightEm)em" viewBox="0 0 @(documentCount) @(lanes.Count)"
+				xmlns:xlink="http://www.w3.org/1999/xlink">
             @{
                 var rowOffsetAccumulator = 0;
                 for(var i = 0; i < authorIds.Count(); i++) {
@@ -106,10 +107,11 @@
                 <path d="M @alfa.Item1 @alfa.Item2 C @(alfa.Item1+1) @alfa.Item2, @(bravo.Item1-1) @bravo.Item2 @bravo.Item1 @bravo.Item2" />
             }
             @foreach(var c in coords) {
+				<a xlink:href='@Url.Action("GetDocument","Document",new {id=c.Key})'>
                 <circle class='@(c.Key.Equals(Model.Id) ? "here" : string.Empty)'
                     cx="@(c.Value.Item1)"
                     cy="@(c.Value.Item2)"
-                    r="0.25" />
+                    r="0.25" /></a>
             }
         </svg>
     </td>
