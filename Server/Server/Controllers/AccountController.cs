@@ -19,6 +19,7 @@ using System.Text;
 using System.Net;
 using System.Collections.Specialized;
 using System.Net.Http;
+using Server.Utilities;
 
 namespace Server.Controllers
 {
@@ -38,17 +39,17 @@ namespace Server.Controllers
         public async Task<IActionResult> Index() {
             var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
             var id = Guid.Parse(nameIdentifierClaim.Value);
-            return await Detail(id);
+			return await GetAccount(id);
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> Detail(string id) {
+		public async Task<IActionResult> GetAccount(string id) {
             var idInBinary = WebEncoders.Base64UrlDecode(id);
             var idAsGuid = new Guid(idInBinary);
-            return await Detail(idAsGuid);
+			return await GetAccount(idAsGuid);
         }
 
-        async Task<IActionResult> Detail(Guid accountId) {
+		async Task<IActionResult> GetAccount(Guid accountId) {
             string displayName;
             string email;
             IEnumerable<DocumentListingViewModel> documentListings;
@@ -130,22 +131,9 @@ namespace Server.Controllers
                 documentListings = documentListings.Where(dl => supercededDocumentIds.Contains(dl.Id.ToGuid()) == false);
             }
 
-            string gravatarHash;
+			var gravatarHash = email.ToGravatarHash();
 
-            using (var md5Encoder = MD5.Create())
-            {
-                md5Encoder.Initialize();
-                var flattened = email.Trim().ToLower();
-                var buffer = Encoding.UTF8.GetBytes(flattened);
-                var hash = md5Encoder.ComputeHash(buffer);
-                var builder = new StringBuilder();
-                for (var i = 0; i < hash.Length; i++) {
-                    builder.AppendFormat("{0:x2}", hash[i]);
-                }
-                gravatarHash = builder.ToString();
-            }
-
-            return View("Detail", new AccountViewModel(accountId, displayName, gravatarHash, documentListings, false));
+			return View("GetAccount", new AccountViewModel(accountId, displayName, gravatarHash, documentListings, false));
         }
 
         [HttpGet("login")]

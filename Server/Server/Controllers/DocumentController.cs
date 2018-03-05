@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using System.Security.Cryptography;
 using System.Reflection;
 using System.IO;
+using Server.Utilities;
 
 namespace Server.Controllers
 {
@@ -157,49 +158,54 @@ namespace Server.Controllers
             {
                 await conn.OpenAsync();
 
-                var relationsBuilder = ImmutableHashSet.CreateBuilder<Relation>();
-                var closedSet = ImmutableHashSet.CreateBuilder<Guid>();
-                var openSet = ImmutableHashSet.CreateBuilder<Guid>();
+				IEnumerable<Guid> allDocumentIdsBoxed;
 
-                openSet.Add(idBoxedInGuidForDatabase);
+				{
+					var relationsBuilder = ImmutableHashSet.CreateBuilder<Relation>();
+					var closedSet = ImmutableHashSet.CreateBuilder<Guid>();
+					var openSet = ImmutableHashSet.CreateBuilder<Guid>();
 
-                while(openSet.Count > 0)
-                {
-                    closedSet.UnionWith(openSet);
-                    var openSetAsArray = openSet.ToArray();
-                    openSet.Clear();
+					openSet.Add(idBoxedInGuidForDatabase);
 
-                    using(var cmd = new NpgsqlCommand())
-                    {
-                        cmd.Connection = conn;
-                        cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId, descendantId] && @openSet;";
-                        cmd.Parameters.AddWithValue("@openSet", openSetAsArray);
+					while (openSet.Count > 0)
+					{
+						closedSet.UnionWith(openSet);
+						var openSetAsArray = openSet.ToArray();
+						openSet.Clear();
 
-                        using(var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while(await reader.ReadAsync())
-                            {
-                                var alfa = reader.GetGuid(0);
-                                var bravo = reader.GetGuid(1);
-                                openSet.Add(alfa);
-                                openSet.Add(bravo);
-                                relationsBuilder.Add(new Relation(new MD5Sum(alfa.ToByteArray()), new MD5Sum(bravo.ToByteArray())));
-                            }
-                        }
-                    }
+						using (var cmd = new NpgsqlCommand())
+						{
+							cmd.Connection = conn;
+							cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId, descendantId] && @openSet;";
+							cmd.Parameters.AddWithValue("@openSet", openSetAsArray);
 
-                    openSet.ExceptWith(closedSet);
-                }
+							using (var reader = await cmd.ExecuteReaderAsync())
+							{
+								while (await reader.ReadAsync())
+								{
+									var alfa = reader.GetGuid(0);
+									var bravo = reader.GetGuid(1);
+									openSet.Add(alfa);
+									openSet.Add(bravo);
+									relationsBuilder.Add(new Relation(new MD5Sum(alfa.ToByteArray()), new MD5Sum(bravo.ToByteArray())));
+								}
+							}
+						}
 
-                relations = relationsBuilder;
+						openSet.ExceptWith(closedSet);
+					}
+
+					relations = relationsBuilder;
+					allDocumentIdsBoxed = closedSet;
+				}
 
                 using (var cmd = new NpgsqlCommand())
                 {
-                    var closedSetAsArray = closedSet.ToArray();
+					var allDocumentIdsInArray = allDocumentIdsBoxed.ToArray();
                     
                     cmd.Connection = conn;
                     cmd.CommandText = "SELECT id, title, authorId, timestamp FROM document WHERE ARRAY[id] && @closedSet;";
-                    cmd.Parameters.AddWithValue("@closedSet", closedSetAsArray);
+                    cmd.Parameters.AddWithValue("@closedSet", allDocumentIdsInArray);
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -221,6 +227,25 @@ namespace Server.Controllers
                     }
                 }
 
+				IImmutableSet<Guid> contributorIds;
+				{
+					var closedSet = ImmutableHashSet.CreateBuilder<MD5Sum>();
+					var openSet = ImmutableHashSet.CreateBuilder<MD5Sum>();
+
+					openSet.Add(new MD5Sum(idInBinary));
+
+					do
+					{
+						var antecedentIds = ImmutableArray.CreateRange(relations.Where(r => openSet.Contains(r.DescendantId)).Select(r => r.AntecedentId));
+						closedSet.UnionWith(openSet);
+						openSet.UnionWith(antecedentIds);
+						openSet.ExceptWith(closedSet);
+					} while (openSet.Count > 0);
+
+					var documentsInHistory = documentsInFamily.Where(d => closedSet.Contains(d.Id));
+					contributorIds = ImmutableHashSet.CreateRange(documentsInHistory.Select(d => d.AuthorId));
+				}
+
                 using (var cmd = new NpgsqlCommand())
                 {
                     var contributorsBuilder = ImmutableArray.CreateBuilder<AccountListingViewModel>();
@@ -228,17 +253,28 @@ namespace Server.Controllers
                     var authorIdsAsArray = ImmutableHashSet.CreateRange(documentsInFamily.Select(d => d.AuthorId)).ToArray();
 
                     cmd.Connection = conn;
-                    cmd.CommandText = "SELECT id, displayName FROM account WHERE ARRAY[id] && @authorIds;";
+                    cmd.CommandText = "SELECT id, displayName, email FROM account WHERE ARRAY[id] && @authorIds;";
                     cmd.Parameters.AddWithValue("@authorIds", authorIdsAsArray);
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            authorNamesBuilder[reader.GetGuid(0)] = reader.GetString(1);
+							var accountId = reader.GetGuid(0);
+							var displayName = reader.GetString(1);
+							var email = reader.GetString(2);
+
+							authorNamesBuilder[accountId] = displayName;
+
+							if (contributorIds.Contains(accountId))
+							{
+								var gravatarHash = email.ToGravatarHash();
+								contributorsBuilder.Add(new AccountListingViewModel(accountId, displayName, gravatarHash));
+							}
                         }
                     }
 
+					contributors = contributorsBuilder.ToImmutable();
                     authorNames = authorNamesBuilder.ToImmutable();
                 }
             }
@@ -247,7 +283,7 @@ namespace Server.Controllers
 
             var subject = documentsInFamily.Single(d => d.Id.Equals(idInBinary));
 
-            return View("History", new HistoryViewModel(subject, relations, documentsInFamily));
+			return View("History", new HistoryViewModel(subject, relations, documentsInFamily, contributors));
         }
 
         [HttpGet("{id}")]

@@ -36,6 +36,14 @@ table.title td {
     padding-right: 1em;
 }
 
+table.accountList {
+	border-collapse: separate;
+	border-spacing: 0.5em
+}
+table.accountList img {
+	width: 2em
+}
+
 img.avatar {
     border-radius: 50%;
 }

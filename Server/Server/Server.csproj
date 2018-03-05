@@ -26,6 +26,8 @@
     <Folder Include="wwwroot\images\" />
     <Folder Include="Views\Document\" />
     <Folder Include="Views\Account\DisplayTemplates\" />
+    <Folder Include="Utilities\" />
+    <Folder Include="Views\Document\DisplayTemplates\" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Setup.sql" />
