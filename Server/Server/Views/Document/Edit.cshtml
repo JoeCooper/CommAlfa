@@ -1,23 +1,73 @@
 ﻿@model Server.ViewModels.DocumentViewModel
-@using Microsoft.AspNetCore.WebUtilities;
 @{
-
+	var mergeUrlReplacementKey = Guid.NewGuid().ToString();
 }
+@using Microsoft.AspNetCore.WebUtilities;
+@using System.Linq;
 <form method="post">
-    <table class="title"><tr>
-        <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title" } })</h1></td>
-        <td class="action"><input type="submit" value="Save" /></td>
-		<td style='width:100%;'></td>
-	    <td><a asp-action="GetDocument">Cancel</a></td>
-    </tr></table>
-    <p>@Html.EditorFor(m => m.Body)</p>
-    @foreach(var sourceId in Model.SourceIds) {
-        <input type="hidden" name="AntecedentIdBase64" value="@(sourceId.ToString())" />
+    @foreach(var sourceId in Model.Sources) {
+	    <input type="hidden" name="AntecedentIdBase64" value="@(sourceId.ToString())" />
     }
+    <table class="title">
+		<tr>
+	        <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title" } })</h1></td>
+	        <td class="action"><input type="submit" value="Save" /></td>
+			<td style='width:100%;'></td>
+		    <td>
+				@if(Model.Sources.Any()) {
+					<a asp-action="GetDocument">Cancel</a>
+				}
+			</td>
+	    </tr>
+		@if(Model.Sources.Count() > 1) {
+		    <tr>
+				<td colspan='4'>
+					<h2>Sources</h2>
+				</td>
+			</tr>
+			@foreach(var source in Model.Sources) {
+			    <tr>
+					<td colspan='4'>
+						<div>“@Html.DisplayFor(m => source.Title)” (@Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp))
+						<input type="hidden" name="AntecedentIdBase64" value="@Html.DisplayFor(m => source.Id)" /></div>
+					</td>
+				</tr>
+			}
+		} else if(Model.Sources.Any()) {
+			@foreach(var source in Model.Sources) {
+			    <tr>
+					<td colspan='4'>
+							Saved by @Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp)
+							<input type="hidden" name="AntecedentIdBase64" value="@Html.DisplayFor(m => source.Id)" />
+							@if(Model.Comparables.Any()) {
+								<select id='mergeSelect' onchange='onSelectMerge()'>
+									<option value="" disabled selected>Merge with…</option>
+									@foreach(var c in Model.Comparables ) {
+										<option value="@(c.Id.ToString())">
+										“@Html.DisplayFor(m => c.Title)” (@Html.DisplayFor(m => c.AuthorDisplayName) on @Html.DisplayFor(m => c.Timestamp))
+										</option>
+									}
+								</select>
+							}
+					</td>
+				</tr>
+			}
+		}
+	</table>
+	<div>
+    @Html.EditorFor(m => m.Body)
+	</div>
 </form>
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js"></script>
 <script>
     var inscrybmde = new InscrybMDE({ element: document.getElementById("Body") });
+	function onSelectMerge() {
+		const replacementCode = '@(mergeUrlReplacementKey)';
+		const mergeUrl = '@Url.Action("Edit","Document",new {id=Model.Sources.First().Id,secondId=mergeUrlReplacementKey})';
+		var mergeSelect = document.getElementById('mergeSelect');
+		var otherDocumentKey = mergeSelect.value;
+		window.location.href = mergeUrl.replace(replacementCode, otherDocumentKey);
+	}
 </script>
 }

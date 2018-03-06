@@ -5,9 +5,8 @@
     <td><a asp-action="Edit">Edit</a></td>
     <td><a asp-action="GetHistory">History</a></td>
 </tr>
-    <tr><td colspan="2">
-    Saved by @Html.DisplayFor(m => m.AuthorDisplayName)
-   on @Html.DisplayFor(m => m.Timestamp)
+    <tr><td colspan="3">
+    Saved by @Html.DisplayFor(m => m.Sources.First().AuthorDisplayName) on @Html.DisplayFor(m => m.Sources.First().Timestamp)
     </td></tr>
 </table>
 <hr />

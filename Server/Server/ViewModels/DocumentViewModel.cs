@@ -10,48 +10,40 @@ namespace Server.ViewModels
 {
     public class DocumentViewModel
     {
-        public DocumentViewModel(
-			IEnumerable<MD5Sum> sourceIds,
-            string body,
-            string title,
-            Guid authorId,
-            DateTime timestamp):
-        this(sourceIds, body, title, authorId, timestamp, "Unknown Author")
+        public DocumentViewModel(string body, string title):
+		this(body, title, Enumerable.Empty<DocumentListingViewModel>(), Enumerable.Empty<DocumentListingViewModel>())
         {
         }
         
         public DocumentViewModel(
-            IEnumerable<MD5Sum> sourceIds,
             string body,
-            string title,
-            Guid authorId,
-            DateTime timestamp,
-            string authorDisplayName
+			string title,
+			IEnumerable<DocumentListingViewModel> sources,
+			IEnumerable<DocumentListingViewModel> comparables
             )
         {
-            SourceIds = sourceIds;
             Body = body;
-            Title = title;
-            AuthorDisplayName = authorDisplayName;
-            Timestamp = timestamp;
-            AuthorId = authorId;
+			Title = title;
+			Sources = sources;
+			Comparables = comparables;
         }
-
-		public IEnumerable<MD5Sum> SourceIds { get; }
 
         [DataType(DataType.MultilineText)]
         public string Body { get; }
 
-        public string Title { get; }
+		public string Title { get; }
 
-        public Guid AuthorId { get; }
+		public IEnumerable<DocumentListingViewModel> Sources { get; }
 
-        public string AuthorDisplayName { get; }
+		public IEnumerable<DocumentListingViewModel> Comparables { get; }
 
-        public DateTime Timestamp { get; }
+		public DocumentViewModel WithComparables(IEnumerable<DocumentListingViewModel> comparables) {
+			return new DocumentViewModel(Body, Title, Sources, comparables);
+		}
 
-        public DocumentViewModel WithAuthorDisplayName(string authorDisplayName) {
-            return new DocumentViewModel(SourceIds, Body, Title, AuthorId, Timestamp, authorDisplayName);
+		public DocumentViewModel WithSources(IEnumerable<DocumentListingViewModel> sources)
+		{
+			return new DocumentViewModel(Body, Title, sources, Comparables);
         }
     }
 }
