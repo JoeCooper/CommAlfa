@@ -13,5 +13,5 @@
     @if(Model.LoginRejected) {
     <p class='error'>Invalid email or password.</p>
     }
-    <p>Don't have an account? <a asp-action="Register">Sign up</a>.</p>
+    <p>Don't have an account? <a asp-action="Register" asp-route-returnUrl='@Model.ReturnUrl'>Sign up</a>.</p>
 </div>

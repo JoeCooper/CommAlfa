@@ -139,7 +139,7 @@ namespace Server.Controllers
         [HttpGet("login")]
         public IActionResult Login(string returnUrl)
         {
-            return View(new LoginViewModel());
+			return View(new LoginViewModel(returnUrl));
         }
 
         [HttpGet("logout")]
@@ -184,15 +184,15 @@ namespace Server.Controllers
                                                       authProperties);
                         return Redirect(returnUrl ?? "/");
                     }
-                    return View(new LoginViewModel(true));
+                    return View(new LoginViewModel(returnUrl, true));
                 }
             }
         }
 
         [HttpGet("register")]
-        public IActionResult Register()
+		public IActionResult Register(string returnUrl)
         {
-            var viewModel = new RegistrationViewModel();
+            var viewModel = new RegistrationViewModel(returnUrl);
             if(recaptchaConfiguration.HasConfiguration)
             {
                 viewModel = viewModel.WithRecaptchaSiteKey(recaptchaConfiguration.SiteKey);
@@ -250,7 +250,7 @@ namespace Server.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegistrationSubmission submission)
+        public async Task<IActionResult> Register(RegistrationSubmission submission, string returnUrl)
         {
             var failureBuilder = ImmutableArray.CreateBuilder<RegistrationFailureReasons>();
             if(VetEmail(submission.Username) == false) {
@@ -307,14 +307,14 @@ namespace Server.Controllers
                 }
             }
             if(failureBuilder.Any()) {
-                var viewModel = new RegistrationViewModel(submission.DisplayName ?? string.Empty, submission.Password ?? string.Empty, failureBuilder);
+				var viewModel = new RegistrationViewModel(returnUrl, submission.DisplayName ?? string.Empty, submission.Password ?? string.Empty, failureBuilder);
                 if (recaptchaConfiguration.HasConfiguration)
                 {
                     viewModel = viewModel.WithRecaptchaSiteKey(recaptchaConfiguration.SiteKey);
                 }
                 return View(viewModel);
             }
-            return RedirectToAction(nameof(Login));
+			return RedirectToAction(nameof(Login), new { returnUrl = returnUrl });
         }
 
         static bool VetEmail(string email)

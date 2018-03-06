@@ -3,12 +3,15 @@ namespace Server.ViewModels
 {
     public class LoginViewModel
     {
-        public LoginViewModel(): this(false) {
+		public LoginViewModel(string returnUrl): this(returnUrl, false) {
         }
         
-        public LoginViewModel(bool loginRejected) {
+        public LoginViewModel(string returnUrl, bool loginRejected) {
+			ReturnUrl = returnUrl;
             LoginRejected = loginRejected;
         }
+
+		public string ReturnUrl { get; }
 
         public bool LoginRejected { get; }
     }

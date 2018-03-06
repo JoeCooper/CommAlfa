@@ -6,21 +6,24 @@ namespace Server.ViewModels
 {
     public class RegistrationViewModel
     {
-        public RegistrationViewModel() : this(string.Empty, string.Empty, null, Enumerable.Empty<RegistrationFailureReasons>())
+        public RegistrationViewModel(string returnUrl) : this(returnUrl, string.Empty, string.Empty, null, Enumerable.Empty<RegistrationFailureReasons>())
         {
         }
 
-        public RegistrationViewModel(string displayName, string username, IEnumerable<RegistrationFailureReasons> reasons) : this(displayName, username, null, reasons)
+		public RegistrationViewModel(string returnUrl, string displayName, string username, IEnumerable<RegistrationFailureReasons> reasons) : this(returnUrl, displayName, username, null, reasons)
         {
         }
 
-        public RegistrationViewModel(string displayName, string username, string recaptchaSiteKey, IEnumerable<RegistrationFailureReasons> reasons)
+        public RegistrationViewModel(string returnUrl, string displayName, string username, string recaptchaSiteKey, IEnumerable<RegistrationFailureReasons> reasons)
         {
             DisplayName = displayName;
             Username = username;
             RecaptchaSiteKey = recaptchaSiteKey;
             Reasons = reasons;
+			ReturnUrl = returnUrl;
         }
+
+		public string ReturnUrl { get; }
 
         public bool UseRecaptcha { get => !string.IsNullOrWhiteSpace(RecaptchaSiteKey); }
 
@@ -35,7 +38,7 @@ namespace Server.ViewModels
         public bool Failed { get => Reasons.Any(); }
 
         public RegistrationViewModel WithRecaptchaSiteKey(string recaptchaSiteKey) {
-            return new RegistrationViewModel(DisplayName, Username, recaptchaSiteKey, Reasons);
+            return new RegistrationViewModel(ReturnUrl,DisplayName, Username, recaptchaSiteKey, Reasons);
         }
     }
 }
