@@ -5,8 +5,8 @@
 @using Microsoft.AspNetCore.WebUtilities;
 @using System.Linq;
 <form method="post">
-    @foreach(var sourceId in Model.Sources) {
-	    <input type="hidden" name="AntecedentIdBase64" value="@(sourceId.ToString())" />
+    @foreach(var source in Model.Sources) {
+	    <input type="hidden" name="AntecedentIdBase64" value="@(source.Id.ToString())" />
     }
     <table class="title">
 		<tr>
@@ -28,8 +28,7 @@
 			@foreach(var source in Model.Sources) {
 			    <tr>
 					<td colspan='4'>
-						<div>“@Html.DisplayFor(m => source.Title)” (@Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp))
-						<input type="hidden" name="AntecedentIdBase64" value="@Html.DisplayFor(m => source.Id)" /></div>
+						<div>“@Html.DisplayFor(m => source.Title)” (@Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp))</div>
 					</td>
 				</tr>
 			}
