@@ -4,13 +4,14 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Server.Models;
 
 namespace Server.ViewModels
 {
     public class DocumentViewModel
     {
         public DocumentViewModel(
-            IEnumerable<byte[]> sourceIds,
+			IEnumerable<MD5Sum> sourceIds,
             string body,
             string title,
             Guid authorId,
@@ -20,7 +21,7 @@ namespace Server.ViewModels
         }
         
         public DocumentViewModel(
-            IEnumerable<byte[]> sourceIds,
+            IEnumerable<MD5Sum> sourceIds,
             string body,
             string title,
             Guid authorId,
@@ -36,7 +37,7 @@ namespace Server.ViewModels
             AuthorId = authorId;
         }
 
-        public IEnumerable<byte[]> SourceIds { get; }
+		public IEnumerable<MD5Sum> SourceIds { get; }
 
         [DataType(DataType.MultilineText)]
         public string Body { get; }

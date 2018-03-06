@@ -1,15 +1,18 @@
 ﻿@model Server.ViewModels.DocumentViewModel
 @using Microsoft.AspNetCore.WebUtilities;
+@{
+
+}
 <form method="post">
     <table class="title"><tr>
         <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title" } })</h1></td>
         <td class="action"><input type="submit" value="Save" /></td>
-			<td style='width:100%;'></td>
-    <td><a asp-action="GetDocument">Cancel</a></td>
+		<td style='width:100%;'></td>
+	    <td><a asp-action="GetDocument">Cancel</a></td>
     </tr></table>
     <p>@Html.EditorFor(m => m.Body)</p>
     @foreach(var sourceId in Model.SourceIds) {
-        <input type="hidden" name="AntecedentIdBase64" value="@WebEncoders.Base64UrlEncode(sourceId)" />
+        <input type="hidden" name="AntecedentIdBase64" value="@(sourceId.ToString())" />
     }
 </form>
 @section Scripts {

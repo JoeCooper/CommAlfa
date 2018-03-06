@@ -136,7 +136,7 @@ namespace Server.Controllers
 				var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
 				var authorId = Guid.Parse(nameIdentifierClaim.Value);
 				var authorDisplayName = User.Identity.Name;
-				viewModel = new DocumentViewModel(Enumerable.Empty<byte[]>(), NewDocumentBody, string.Empty, authorId, DateTime.Now, authorDisplayName);
+				viewModel = new DocumentViewModel(Enumerable.Empty<MD5Sum>(), NewDocumentBody, string.Empty, authorId, DateTime.Now, authorDisplayName);
 			} else {
 				viewModel = await GetDocumentViewModelAsync(id);
 			}
@@ -157,6 +157,7 @@ namespace Server.Controllers
 				await conn.OpenAsync();
 
 				var idInBinary = WebEncoders.Base64UrlDecode(id);
+				var idInMD5Sum = new MD5Sum(idInBinary);
 				var idBoxedInGuidForDatabase = new Guid(idInBinary);
 
 				DocumentViewModel viewModel;
@@ -171,7 +172,7 @@ namespace Server.Controllers
 					{
 						if (await reader.ReadAsync())
 						{
-							viewModel = new DocumentViewModel(ImmutableArray.Create<byte[]>(idInBinary), reader.GetString(0), reader.GetString(1), reader.GetGuid(2), reader.GetDateTime(3));
+							viewModel = new DocumentViewModel(ImmutableArray.Create<MD5Sum>(idInMD5Sum), reader.GetString(0), reader.GetString(1), reader.GetGuid(2), reader.GetDateTime(3));
 						}
 						else
 						{
