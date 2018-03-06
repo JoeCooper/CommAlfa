@@ -127,36 +127,97 @@ namespace Server.Controllers
             return RedirectToAction(nameof(GetDocument), new { id = submissionIdAsBase64 });
         }
 
-        [HttpGet("new/edit")] [Authorize]
-        public IActionResult New()
-        {
-            var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
-            var authorId = Guid.Parse(nameIdentifierClaim.Value);
-            var authorDisplayName = User.Identity.Name;
-            return View("Edit", new DocumentViewModel(Enumerable.Empty<byte[]>(), NewDocumentBody, string.Empty, authorId, DateTime.Now, authorDisplayName));
-        }
-
         [Authorize]
         [HttpGet("{id}/edit")]
         public async Task<IActionResult> Edit(string id)
         {
-            return await GetDocument(id, true);
-        }
+			DocumentViewModel viewModel;
+			if(id == "new") {
+				var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
+				var authorId = Guid.Parse(nameIdentifierClaim.Value);
+				var authorDisplayName = User.Identity.Name;
+				viewModel = new DocumentViewModel(Enumerable.Empty<byte[]>(), NewDocumentBody, string.Empty, authorId, DateTime.Now, authorDisplayName);
+			} else {
+				viewModel = await GetDocumentViewModelAsync(id);
+			}
+			return View("Edit", viewModel);
+		}
 
-        [HttpGet("{id}/history")]
-        public async Task<IActionResult> GetHistory(string id)
-        {
-            var idInBinary = WebEncoders.Base64UrlDecode(id);
-            var idBoxedInGuidForDatabase = new Guid(idInBinary);
+		[HttpGet("{id}")]
+		public async Task<IActionResult> GetDocument(string id)
+		{
+			var viewModel = await GetDocumentViewModelAsync(id);
+			return View("Document", viewModel);
+		}
 
-            IEnumerable<DocumentListingViewModel> documentsInFamily;
-            IEnumerable<Relation> relations;
-            IImmutableDictionary<Guid, string> authorNames;
-            IEnumerable<AccountListingViewModel> contributors;
+		async Task<DocumentViewModel> GetDocumentViewModelAsync(string id)
+		{
+			using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
+			{
+				await conn.OpenAsync();
 
-            using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-            {
-                await conn.OpenAsync();
+				var idInBinary = WebEncoders.Base64UrlDecode(id);
+				var idBoxedInGuidForDatabase = new Guid(idInBinary);
+
+				DocumentViewModel viewModel;
+
+				using (var cmd = new NpgsqlCommand())
+				{
+					cmd.Connection = conn;
+					cmd.CommandText = "SELECT body,title,authorId,timestamp FROM document WHERE id=@id;";
+					cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
+
+					using (var reader = await cmd.ExecuteReaderAsync())
+					{
+						if (await reader.ReadAsync())
+						{
+							viewModel = new DocumentViewModel(ImmutableArray.Create<byte[]>(idInBinary), reader.GetString(0), reader.GetString(1), reader.GetGuid(2), reader.GetDateTime(3));
+						}
+						else
+						{
+							viewModel = null;
+						}
+					}
+				}
+
+				if (viewModel != null)
+				{
+					using (var cmd = new NpgsqlCommand())
+					{
+						cmd.Connection = conn;
+						cmd.CommandText = "SELECT displayName FROM account WHERE id=@id;";
+						cmd.Parameters.AddWithValue("@id", viewModel.AuthorId);
+
+						using (var reader = await cmd.ExecuteReaderAsync())
+						{
+							if (await reader.ReadAsync())
+							{
+								viewModel = viewModel.WithAuthorDisplayName(reader.GetString(0));
+							}
+						}
+					}
+
+					return viewModel;
+				}
+
+				throw new FileNotFoundException();
+			}
+		}
+
+		[HttpGet("{id}/history")]
+		public async Task<IActionResult> GetHistory(string id)
+		{
+			var idInBinary = WebEncoders.Base64UrlDecode(id);
+			var idBoxedInGuidForDatabase = new Guid(idInBinary);
+
+			IEnumerable<DocumentListingViewModel> documentsInFamily;
+			IEnumerable<Relation> relations;
+			IImmutableDictionary<Guid, string> authorNames;
+			IEnumerable<AccountListingViewModel> contributors;
+
+			using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
+			{
+				await conn.OpenAsync();
 
 				IEnumerable<Guid> allDocumentIdsBoxed;
 
@@ -199,33 +260,33 @@ namespace Server.Controllers
 					allDocumentIdsBoxed = closedSet;
 				}
 
-                using (var cmd = new NpgsqlCommand())
-                {
+				using (var cmd = new NpgsqlCommand())
+				{
 					var allDocumentIdsInArray = allDocumentIdsBoxed.ToArray();
-                    
-                    cmd.Connection = conn;
-                    cmd.CommandText = "SELECT id, title, authorId, timestamp FROM document WHERE ARRAY[id] && @closedSet;";
-                    cmd.Parameters.AddWithValue("@closedSet", allDocumentIdsInArray);
 
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        var documentsBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
+					cmd.Connection = conn;
+					cmd.CommandText = "SELECT id, title, authorId, timestamp FROM document WHERE ARRAY[id] && @closedSet;";
+					cmd.Parameters.AddWithValue("@closedSet", allDocumentIdsInArray);
 
-                        while (await reader.ReadAsync())
-                        {
-                            documentsBuilder.Add(
-                                new DocumentListingViewModel(
-                                    new MD5Sum(reader.GetGuid(0).ToByteArray()),
-                                    reader.GetString(1),
-                                    reader.GetGuid(2),
-                                    reader.GetDateTime(3)
-                                )
-                            );
-                        }
+					using (var reader = await cmd.ExecuteReaderAsync())
+					{
+						var documentsBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
 
-                        documentsInFamily = documentsBuilder;
-                    }
-                }
+						while (await reader.ReadAsync())
+						{
+							documentsBuilder.Add(
+								new DocumentListingViewModel(
+									new MD5Sum(reader.GetGuid(0).ToByteArray()),
+									reader.GetString(1),
+									reader.GetGuid(2),
+									reader.GetDateTime(3)
+								)
+							);
+						}
+
+						documentsInFamily = documentsBuilder;
+					}
+				}
 
 				IImmutableSet<Guid> contributorIds;
 				{
@@ -246,20 +307,20 @@ namespace Server.Controllers
 					contributorIds = ImmutableHashSet.CreateRange(documentsInHistory.Select(d => d.AuthorId));
 				}
 
-                using (var cmd = new NpgsqlCommand())
-                {
-                    var contributorsBuilder = ImmutableArray.CreateBuilder<AccountListingViewModel>();
-                    var authorNamesBuilder = ImmutableDictionary.CreateBuilder<Guid, string>();
-                    var authorIdsAsArray = ImmutableHashSet.CreateRange(documentsInFamily.Select(d => d.AuthorId)).ToArray();
+				using (var cmd = new NpgsqlCommand())
+				{
+					var contributorsBuilder = ImmutableArray.CreateBuilder<AccountListingViewModel>();
+					var authorNamesBuilder = ImmutableDictionary.CreateBuilder<Guid, string>();
+					var authorIdsAsArray = ImmutableHashSet.CreateRange(documentsInFamily.Select(d => d.AuthorId)).ToArray();
 
-                    cmd.Connection = conn;
-                    cmd.CommandText = "SELECT id, displayName, email FROM account WHERE ARRAY[id] && @authorIds;";
-                    cmd.Parameters.AddWithValue("@authorIds", authorIdsAsArray);
+					cmd.Connection = conn;
+					cmd.CommandText = "SELECT id, displayName, email FROM account WHERE ARRAY[id] && @authorIds;";
+					cmd.Parameters.AddWithValue("@authorIds", authorIdsAsArray);
 
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
+					using (var reader = await cmd.ExecuteReaderAsync())
+					{
+						while (await reader.ReadAsync())
+						{
 							var accountId = reader.GetGuid(0);
 							var displayName = reader.GetString(1);
 							var email = reader.GetString(2);
@@ -271,74 +332,19 @@ namespace Server.Controllers
 								var gravatarHash = email.ToGravatarHash();
 								contributorsBuilder.Add(new AccountListingViewModel(accountId, displayName, gravatarHash));
 							}
-                        }
-                    }
+						}
+					}
 
 					contributors = contributorsBuilder.ToImmutable();
-                    authorNames = authorNamesBuilder.ToImmutable();
-                }
-            }
+					authorNames = authorNamesBuilder.ToImmutable();
+				}
+			}
 
-            documentsInFamily = documentsInFamily.Select(d => d.WithAuthorDisplayName(authorNames[d.AuthorId]));
+			documentsInFamily = documentsInFamily.Select(d => d.WithAuthorDisplayName(authorNames[d.AuthorId]));
 
-            var subject = documentsInFamily.Single(d => d.Id.Equals(idInBinary));
+			var subject = documentsInFamily.Single(d => d.Id.Equals(idInBinary));
 
 			return View("History", new HistoryViewModel(subject, relations, documentsInFamily, contributors));
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetDocument(string id, bool edit)
-        {
-            using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-            {
-                await conn.OpenAsync();
-
-                var idInBinary = WebEncoders.Base64UrlDecode(id);
-                var idBoxedInGuidForDatabase = new Guid(idInBinary);
-
-                DocumentViewModel viewModel;
-
-                using (var cmd = new NpgsqlCommand())
-                {
-                    cmd.Connection = conn;
-                    cmd.CommandText = "SELECT body,title,authorId,timestamp FROM document WHERE id=@id;";
-                    cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        if (await reader.ReadAsync())
-                        {
-                            viewModel = new DocumentViewModel(ImmutableArray.Create<byte[]>(idInBinary), reader.GetString(0), reader.GetString(1), reader.GetGuid(2), reader.GetDateTime(3));
-                        }
-                        else
-                        {
-                            viewModel = null;
-                        }
-                    }
-                }
-
-                if (viewModel != null)
-                {
-                    using (var cmd = new NpgsqlCommand())
-                    {
-                        cmd.Connection = conn;
-                        cmd.CommandText = "SELECT displayName FROM account WHERE id=@id;";
-                        cmd.Parameters.AddWithValue("@id", viewModel.AuthorId);
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                viewModel = viewModel.WithAuthorDisplayName(reader.GetString(0));
-                            }
-                        }
-                    }
-
-                    return View(edit ? "Edit" : "Document", viewModel);
-                }
-
-                return NotFound();
-            }
-        }
+		}
     }
 }
