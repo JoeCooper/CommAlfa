@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS documentBlock (
 	agentId UUID NOT NULL REFERENCES account (id) ON DELETE RESTRICT,
 	comment TEXT NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC')
-)
+);
 CREATE TABLE IF NOT EXISTS relation (
     antecedentId UUID NOT NULL REFERENCES document (id) ON DELETE RESTRICT,
     descendantId UUID NOT NULL REFERENCES document (id) ON DELETE RESTRICT,
