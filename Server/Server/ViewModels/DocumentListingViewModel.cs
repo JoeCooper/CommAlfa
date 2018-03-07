@@ -5,9 +5,11 @@ using Server.Models;
 namespace Server.ViewModels
 {
     public class DocumentListingViewModel
-    {
+	{
+		const string Ellipsis = "…";
+
         public DocumentListingViewModel(MD5Sum id, string title, Guid authorId, DateTime timestamp):
-            this(id, title, string.Empty, authorId, timestamp)
+			this(id, title, Ellipsis, authorId, timestamp)
         {
         }
 

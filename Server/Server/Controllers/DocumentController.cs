@@ -89,13 +89,21 @@ namespace Server.Controllers
                     using (var cmd = new NpgsqlCommand())
                     {
                         cmd.Connection = conn;
-                        cmd.CommandText = "INSERT INTO document(id,title,body,authorId) VALUES(@id,@title,@body,@authorId);";
+                        cmd.CommandText = "INSERT INTO document(id,title,authorId) VALUES(@id,@title,@authorId);";
                         cmd.Parameters.AddWithValue("@id", submissionIdAsGuid);
                         cmd.Parameters.AddWithValue("@title", submissionModel.Title);
-                        cmd.Parameters.AddWithValue("@body", submissionModel.Body);
                         cmd.Parameters.AddWithValue("@authorId", authorId);
                         await cmd.ExecuteNonQueryAsync();
-                    }
+					}
+
+					using (var cmd = new NpgsqlCommand())
+					{
+						cmd.Connection = conn;
+						cmd.CommandText = "INSERT INTO documentBody(id,body) VALUES(@id,@body);";
+						cmd.Parameters.AddWithValue("@id", submissionIdAsGuid);
+						cmd.Parameters.AddWithValue("@body", submissionModel.Body);
+						await cmd.ExecuteNonQueryAsync();
+					}
 
                     foreach (var antecedantIdBoxedAsGuid in antecedantIds
                              .Select(bytes => new Guid(bytes))
@@ -201,21 +209,44 @@ namespace Server.Controllers
 		{
 			var idBoxedInGuidForDatabase = id.ToGuid();
 
-			DocumentViewModel viewModel;
 			DocumentListingViewModel sourceDescription;
+			string title;
 
 			using (var cmd = new NpgsqlCommand())
 			{
 				cmd.Connection = connection;
-				cmd.CommandText = "SELECT body,title,authorId,timestamp FROM document WHERE id=@id;";
+				cmd.CommandText = "SELECT title,authorId,timestamp FROM document WHERE id=@id;";
 				cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
 
 				using (var reader = await cmd.ExecuteReaderAsync())
 				{
 					if (await reader.ReadAsync())
 					{
-						viewModel = new DocumentViewModel(reader.GetString(0), reader.GetString(1));
-						sourceDescription = new DocumentListingViewModel(id, reader.GetString(1), reader.GetGuid(2), reader.GetDateTime(3));
+						title = reader.GetString(0);
+						var authorId = reader.GetGuid(1);
+						var timestamp = reader.GetDateTime(2);
+						sourceDescription = new DocumentListingViewModel(id, title, authorId, timestamp);
+					}
+					else
+					{
+						throw new FileNotFoundException();
+					}
+				}
+			}
+
+			string body;
+
+			using (var cmd = new NpgsqlCommand())
+			{
+				cmd.Connection = connection;
+				cmd.CommandText = "SELECT body FROM documentBody WHERE id=@id;";
+				cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
+
+				using (var reader = await cmd.ExecuteReaderAsync())
+				{
+					if (await reader.ReadAsync())
+					{
+						body = reader.GetString(0);
 					}
 					else
 					{
@@ -234,13 +265,13 @@ namespace Server.Controllers
 				{
 					if (await reader.ReadAsync())
 					{
-						var displayName = reader.GetString(0);
-						viewModel = viewModel.WithSources(new[] { sourceDescription.WithAuthorDisplayName(displayName) });
+						var authorDisplayName = reader.GetString(0);
+						sourceDescription = sourceDescription.WithAuthorDisplayName(authorDisplayName);
 					}
 				}
 			}
 
-			return viewModel;
+			return new DocumentViewModel(body, title, new[] { sourceDescription }, Enumerable.Empty<DocumentListingViewModel>());
 		}
 
 		async Task<IEnumerable<Relation>> GetRelation(NpgsqlConnection connection, MD5Sum documentId) {
