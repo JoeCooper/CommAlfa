@@ -39,7 +39,6 @@
 			    <tr>
 					<td colspan='4'>
 							Saved by @Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp)
-							<input type="hidden" name="AntecedentIdBase64" value="@Html.DisplayFor(m => source.Id)" />
 							@if(Model.Comparables.Any()) {
 								<select id='mergeSelect' onchange='onSelectMerge()'>
 									<option value="" disabled selected>Merge with…</option>
