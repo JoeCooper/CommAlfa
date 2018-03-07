@@ -380,6 +380,7 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetHistory(string id)
 		{
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
+			var idInMD5Sum = new MD5Sum(idInBinary);
 			var idBoxedInGuidForDatabase = new Guid(idInBinary);
 
 			IEnumerable<DocumentListingViewModel> documentsInFamily;
@@ -390,12 +391,13 @@ namespace Server.Controllers
 			{
 				await conn.OpenAsync();
 
-				relations = await GetRelation(conn, new MD5Sum(idInBinary));
+				relations = await GetRelation(conn, idInMD5Sum);
 
 				{
 					var allIdsBuilder = ImmutableHashSet.CreateBuilder<MD5Sum>();
 					allIdsBuilder.UnionWith(relations.Select(r => r.AntecedentId));
 					allIdsBuilder.UnionWith(relations.Select(r => r.DescendantId));
+					allIdsBuilder.Add(idInMD5Sum);
 					documentsInFamily = await GetDocumentListingsAsync(conn, allIdsBuilder);
 				}
 
