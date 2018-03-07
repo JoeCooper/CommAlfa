@@ -1,5 +1,30 @@
 ﻿@model Server.ViewModels.DocumentViewModel
 @using HeyRed.MarkdownSharp;
+@using System.Text;
+@{
+	string encodedBody;
+	{
+		var bodyBuilder = new StringBuilder();
+		for(var i = 0; i < Model.Body.Length; i++) {
+			var c = Model.Body[i];
+			switch(c) {
+				case '<':
+				bodyBuilder.Append("&lt;");
+				break;
+				case '>':
+				bodyBuilder.Append("&gt;");
+				break;
+				case '&':
+				bodyBuilder.Append("&amp;");
+				break;
+				default:
+				bodyBuilder.Append(c);
+				break;
+			}
+		}
+		encodedBody = new Markdown().Transform(bodyBuilder.ToString());
+	}
+}
 <table class="title"><tr>
     <td><h1>@Html.DisplayFor(m => m.Title)</h1></td>
     <td><a asp-action="Edit">Edit</a></td>
@@ -10,4 +35,4 @@
     </td></tr>
 </table>
 <hr />
-@Html.Raw((new Markdown().Transform(Model.Body)))
+@Html.Raw(encodedBody)
