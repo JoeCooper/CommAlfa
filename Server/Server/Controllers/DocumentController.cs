@@ -144,7 +144,7 @@ namespace Server.Controllers
         {
 			DocumentViewModel viewModel;
 			if(id == "new") {
-				viewModel = new DocumentViewModel(string.Empty, string.Empty);
+				viewModel = new DocumentViewModel(NewDocumentBody, string.Empty);
 			} else {
 				var idInBinary = WebEncoders.Base64UrlDecode(id);
 				var idInMD5Sum = new MD5Sum(idInBinary);
