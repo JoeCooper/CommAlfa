@@ -249,9 +249,19 @@ namespace Server.Controllers
             return digest;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegistrationSubmission submission, string returnUrl)
-        {
+		[HttpPost("register")]
+		public async Task<IActionResult> Register(RegistrationSubmission submission, string returnUrl)
+		{
+			{
+				//This is a hack. WebAPI cannot automatically deserialized the recaptcha response
+				//because its key has an unexpected form and it doesn't have any documented method
+				//to specify the serialized key of the field, akin to [JsonProperty] or [DataMember].
+				const string recaptchaResponseKey = "g-recaptcha-response";
+				if (Request.Form.ContainsKey(recaptchaResponseKey))
+				{
+					submission.RecaptchaResponse = Request.Form[recaptchaResponseKey];
+				}
+			}
             var failureBuilder = ImmutableArray.CreateBuilder<RegistrationFailureReasons>();
             if(VetEmail(submission.Username) == false) {
                 failureBuilder.Add(RegistrationFailureReasons.EmailIsInvalid);

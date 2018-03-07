@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Runtime.Serialization;
 
 namespace Server.Models
 {
@@ -10,7 +10,6 @@ namespace Server.Models
 
         public string DisplayName { get; set; }
 
-        [JsonProperty("g-recaptcha-response")]
-        public string RecaptchaResponse { get; set; }
+		public string RecaptchaResponse { get; set; }
     }
 }
