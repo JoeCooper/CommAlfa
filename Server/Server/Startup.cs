@@ -33,6 +33,19 @@ namespace Server
                 options.ConnectionString = Environment.GetEnvironmentVariable("POSTGRES_URL");
             });
 
+			services.Configure<InputConfiguration>(options =>
+			{
+				int bodyLengthLimit, titleLengthLimit;
+				if(!int.TryParse(Environment.GetEnvironmentVariable("LIMIT_BODYLENGTH"), out bodyLengthLimit)) {
+					bodyLengthLimit = 262144; //2 to the 18th power
+				}
+				if(!int.TryParse(Environment.GetEnvironmentVariable("LIMIT_TITLELENGTH"), out titleLengthLimit)) {
+					titleLengthLimit = 128; //2 to the 7th power
+				}
+				options.BodyLengthLimit = bodyLengthLimit;
+				options.TitleLengthLimit = titleLengthLimit;
+			});
+
             services.Configure<RecaptchaConfiguration>(options => {
                 options.SecretKey = Environment.GetEnvironmentVariable("RECAPTCHA_SECRETKEY");
                 options.SiteKey = Environment.GetEnvironmentVariable("RECAPTCHA_SITEKEY");

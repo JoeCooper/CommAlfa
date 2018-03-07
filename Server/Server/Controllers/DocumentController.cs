@@ -38,10 +38,12 @@ namespace Server.Controllers
         }
         
         readonly DatabaseConfiguration databaseConfiguration;
+		readonly InputConfiguration inputConfiguration;
 
-        public DocumentController(IOptions<DatabaseConfiguration> _databaseConfiguration)
+		public DocumentController(IOptions<DatabaseConfiguration> _databaseConfiguration, IOptions<InputConfiguration> _inputConfiguration)
         {
             databaseConfiguration = _databaseConfiguration.Value;
+			inputConfiguration = _inputConfiguration.Value;
         }
 
         [HttpPost("{id}/edit")]
@@ -57,6 +59,14 @@ namespace Server.Controllers
 
             submissionModel.Title = submissionModel.Title ?? string.Empty;
             submissionModel.Body = submissionModel.Body ?? string.Empty;
+
+			if(submissionModel.Title.Length > inputConfiguration.TitleLengthLimit) {
+				return StatusCode(413);
+			}
+
+			if(submissionModel.Body.Length > inputConfiguration.BodyLengthLimit) {
+				return StatusCode(413);
+			}
 
             byte[] submissionId;
 

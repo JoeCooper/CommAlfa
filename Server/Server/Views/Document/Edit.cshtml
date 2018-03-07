@@ -1,16 +1,18 @@
 ﻿@model Server.ViewModels.DocumentViewModel
+@using Microsoft.Extensions.Options
+@inject IOptions<InputConfiguration> InputConfiguration
 @{
 	var mergeUrlReplacementKey = Guid.NewGuid().ToString();
 }
 @using Microsoft.AspNetCore.WebUtilities;
 @using System.Linq;
-<form method="post">
+<form name='document' method="post" onsubmit="return onSubmit();">
     @foreach(var source in Model.Sources) {
 	    <input type="hidden" name="AntecedentIdBase64" value="@(source.Id.ToString())" />
     }
     <table class="title">
 		<tr>
-	        <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title" } })</h1></td>
+	        <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title", maxlength = InputConfiguration.Value.TitleLengthLimit } })</h1></td>
 	        <td class="action"><input type="submit" value="Save" /></td>
 			<td style='width:100%;'></td>
 		    <td>
@@ -54,13 +56,27 @@
 		}
 	</table>
 	<div>
-    @Html.EditorFor(m => m.Body)
+	    @Html.EditorFor(m => m.Body, new { htmlAttributes = new { maxlength = InputConfiguration.Value.BodyLengthLimit } })
 	</div>
 </form>
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js"></script>
 <script>
-var inscrybmde = new InscrybMDE({ element: document.getElementById("Body") });
+var bodyEditor = document.getElementById('Body');
+var inscrybmde = new InscrybMDE({ element: bodyEditor });
+const titleLengthLimit = @(InputConfiguration.Value.TitleLengthLimit);
+const bodyLengthLimit = @(InputConfiguration.Value.BodyLengthLimit);
+function onSubmit() {
+	if(document.forms['document']['Title'].value.length > titleLengthLimit) {
+		alert('Title is too long. Maximum length: ' + titleLengthLimit);
+		return false;
+	}
+	if(document.forms['document']['Body'].value.length > bodyLengthLimit) {
+		alert('Document is too long. Maximum length: ' + bodyLengthLimit);
+		return false;
+	}
+	return true;
+}
 </script>
 @if(Model.Sources.Any()) {
 <script>
