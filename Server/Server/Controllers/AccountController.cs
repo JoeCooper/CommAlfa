@@ -25,7 +25,10 @@ namespace Server.Controllers
 {
     [Route("account")]
     public class AccountController : Controller
-    {
+	{
+		//Any values over this likely represent the client messing with us
+		const int PropertyLengthLimit = 1024;
+
         readonly DatabaseConfiguration databaseConfiguration;
         readonly RecaptchaConfiguration recaptchaConfiguration;
 
@@ -44,6 +47,8 @@ namespace Server.Controllers
 
         [HttpGet("{id}")]
 		public async Task<IActionResult> GetAccount(string id) {
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
             var idInBinary = WebEncoders.Base64UrlDecode(id);
             var idAsGuid = new Guid(idInBinary);
 			return await GetAccount(idAsGuid);
@@ -150,43 +155,57 @@ namespace Server.Controllers
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(string returnUrl, LoginSubmission submission) {
-            using(var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-            using(var cmd = new NpgsqlCommand()) {
-                await conn.OpenAsync();
-                cmd.Connection = conn;
-                cmd.CommandText = "SELECT id,displayName,password_digest FROM account WHERE email=@email;";
-                cmd.Parameters.AddWithValue("@email", submission.Username ?? string.Empty);
-                using(var reader = await cmd.ExecuteReaderAsync()) {
-                    Account account = null;
-                    if(await reader.ReadAsync()) {
-                        var guid = reader.GetGuid(0);
-                        var displayName = reader.GetString(1);
-                        var extantDigest = new byte[384 / 8];
-                        reader.GetBytes(2, 0, extantDigest, 0, extantDigest.Length);
-                        var isValid = EvaluatePassword(submission.Password, extantDigest);
-                        if(isValid) {
-                            account = new Account(guid, displayName);
-                        }
-                    }
-                    if(account != null) {
-                        var claims = new[] {
-                            new Claim(ClaimTypes.NameIdentifier, account.Id.ToString(), ClaimValueTypes.String),
-                            new Claim(ClaimTypes.Name, account.DisplayName, ClaimValueTypes.String)
-                        };
-                        var claimsIdentity = new ClaimsIdentity(claims, "SecureLogin");
-                        var authProperties = new AuthenticationProperties
-                        {
-                            ExpiresUtc = DateTimeOffset.UtcNow.AddYears(1),
-                            IsPersistent = true
-                        };
-                        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-                                                      new ClaimsPrincipal(claimsIdentity),
-                                                      authProperties);
-                        return Redirect(returnUrl ?? "/");
-                    }
-                    return View(new LoginViewModel(returnUrl, true));
-                }
-            }
+			if (submission == null)
+				return BadRequest();
+			if (submission.Password.Length > PropertyLengthLimit)
+				return BadRequest();
+			if (submission.Username.Length > PropertyLengthLimit)
+				return BadRequest();
+			Account account = null;
+			if (VetEmail(submission.Username) && VetPassword(submission.Password))
+			{
+				using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
+				using (var cmd = new NpgsqlCommand())
+				{
+					await conn.OpenAsync();
+					cmd.Connection = conn;
+					cmd.CommandText = "SELECT id,displayName,password_digest FROM account WHERE email=@email;";
+					cmd.Parameters.AddWithValue("@email", submission.Username ?? string.Empty);
+					using (var reader = await cmd.ExecuteReaderAsync())
+					{
+						if (await reader.ReadAsync())
+						{
+							var guid = reader.GetGuid(0);
+							var displayName = reader.GetString(1);
+							var extantDigest = new byte[384 / 8];
+							reader.GetBytes(2, 0, extantDigest, 0, extantDigest.Length);
+							var isValid = EvaluatePassword(submission.Password, extantDigest);
+							if (isValid)
+							{
+								account = new Account(guid, displayName);
+							}
+						}
+					}
+				}
+			}
+			if (account != null)
+			{
+				var claims = new[] {
+							new Claim(ClaimTypes.NameIdentifier, account.Id.ToString(), ClaimValueTypes.String),
+							new Claim(ClaimTypes.Name, account.DisplayName, ClaimValueTypes.String)
+						};
+				var claimsIdentity = new ClaimsIdentity(claims, "SecureLogin");
+				var authProperties = new AuthenticationProperties
+				{
+					ExpiresUtc = DateTimeOffset.UtcNow.AddYears(1),
+					IsPersistent = true
+				};
+				await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+											  new ClaimsPrincipal(claimsIdentity),
+											  authProperties);
+				return Redirect(returnUrl ?? "/");
+			}
+			return View(new LoginViewModel(returnUrl, true));
         }
 
         [HttpGet("register")]
@@ -252,6 +271,8 @@ namespace Server.Controllers
 		[HttpPost("register")]
 		public async Task<IActionResult> Register(RegistrationSubmission submission, string returnUrl)
 		{
+			if (submission == null)
+				return BadRequest();
 			{
 				//This is a hack. WebAPI cannot automatically deserialized the recaptcha response
 				//because its key has an unexpected form and it doesn't have any documented method
@@ -292,7 +313,7 @@ namespace Server.Controllers
                     }
                 }
             }
-            if(failureBuilder.Any() == false) {
+            if(!failureBuilder.Any()) {
                 using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
                 using (var cmd = new NpgsqlCommand())
                 {
@@ -329,17 +350,17 @@ namespace Server.Controllers
 
         static bool VetEmail(string email)
         {
-            return !string.IsNullOrWhiteSpace(email) && EmailValidation.EmailValidator.Validate(email);
+			return !string.IsNullOrWhiteSpace(email) && EmailValidation.EmailValidator.Validate(email) && email.Length < PropertyLengthLimit;
         }
 
         static bool VetDisplayName(string displayName)
         {
-            return string.IsNullOrWhiteSpace(displayName) == false;
+			return !string.IsNullOrWhiteSpace(displayName) && displayName.Length < PropertyLengthLimit;
         }
 
         static bool VetPassword(string password)
         {
-            return !string.IsNullOrWhiteSpace(password) && password.Length >= 6;
+			return !string.IsNullOrWhiteSpace(password) && password.Length >= 6 && password.Length < PropertyLengthLimit;
         }
     }
 }

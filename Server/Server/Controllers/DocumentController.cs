@@ -49,13 +49,18 @@ namespace Server.Controllers
         [HttpPost("{id}/edit")]
         [Authorize]
         public async Task<IActionResult> Save(string id, DocumentSubmissionModel submissionModel)
-        {
+		{
             submissionModel.AntecedentIdBase64 = submissionModel.AntecedentIdBase64 ?? Enumerable.Empty<string>();
             
             if (submissionModel.AntecedentIdBase64.Count() > 2)
             {
                 return BadRequest();
             }
+
+			if(submissionModel.AntecedentIdBase64.Any(_id => _id.FalsifyAsIdentifier()))
+			{
+				return BadRequest();
+			}
 
             submissionModel.Title = submissionModel.Title ?? string.Empty;
             submissionModel.Body = submissionModel.Body ?? string.Empty;
@@ -156,6 +161,10 @@ namespace Server.Controllers
 			if(id == "new") {
 				viewModel = new DocumentViewModel(NewDocumentBody, string.Empty);
 			} else {
+				if (id.FalsifyAsIdentifier())
+					return BadRequest();
+				if (secondId != null && secondId.FalsifyAsIdentifier())
+					return BadRequest();
 				var idInBinary = WebEncoders.Base64UrlDecode(id);
 				var idInMD5Sum = new MD5Sum(idInBinary);
 				using (var connection = new NpgsqlConnection(databaseConfiguration.ConnectionString))
@@ -204,6 +213,8 @@ namespace Server.Controllers
 		[HttpGet("{id}")]
 		public async Task<IActionResult> GetDocument(string id)
 		{
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var idInMD5Sum = new MD5Sum(idInBinary);
 			DocumentViewModel viewModel;
@@ -389,6 +400,8 @@ namespace Server.Controllers
 		[HttpGet("{id}/history")]
 		public async Task<IActionResult> GetHistory(string id)
 		{
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var idInMD5Sum = new MD5Sum(idInBinary);
 			var idBoxedInGuidForDatabase = new Guid(idInBinary);
