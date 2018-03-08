@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Server.Utilities;
 
 namespace Server.Models
 {
@@ -18,7 +20,12 @@ namespace Server.Models
             hashCode = antecedentId.GetHashCode() ^ descendantId.GetHashCode();
         }
 
+		[JsonProperty("antecedentId")]
+		[JsonConverter(typeof(IdentifierConverter))]
         public MD5Sum AntecedentId { get; }
+
+		[JsonProperty("descendantId")]
+		[JsonConverter(typeof(IdentifierConverter))]
         public MD5Sum DescendantId { get; }
 
         public override int GetHashCode()
