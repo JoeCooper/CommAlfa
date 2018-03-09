@@ -230,26 +230,39 @@ namespace Server.Controllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetDocument(string id)
+		public IActionResult GetDocument(string id)
+		{
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
+			return View("Document", new IdentifierViewModel(id));
+		}
+
+		[HttpGet("{id}/flattened")]
+		[ResponseCache(CacheProfileName = CacheProfileNames.SemiImmutable)]
+		public async Task<IActionResult> GetDocumentForIndexing(string id)
 		{
 			if (id.FalsifyAsIdentifier())
 				return BadRequest();
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var idInMD5Sum = new MD5Sum(idInBinary);
 			DocumentViewModel viewModel;
-			try {
+			try
+			{
 				using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
 				{
 					await conn.OpenAsync();
 					viewModel = await GetDocumentViewModelAsync(conn, idInMD5Sum);
 				}
-				return View("Document", viewModel);
+				return View("DocumentForIndexing", viewModel);
 			}
-			catch(FileNotFoundException) {
+			catch (FileNotFoundException)
+			{
 				return NotFound();
 			}
-			catch(DocumentBlockedException ex) {
-				if(ex.IsBlockVoluntary) {
+			catch (DocumentBlockedException ex)
+			{
+				if (ex.IsBlockVoluntary)
+				{
 					return StatusCode(410);
 				}
 				return StatusCode(451);

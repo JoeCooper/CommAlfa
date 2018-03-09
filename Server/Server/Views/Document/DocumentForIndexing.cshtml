@@ -1,0 +1,30 @@
+﻿@model Server.ViewModels.DocumentViewModel
+@using HeyRed.MarkdownSharp;
+@using System.Text;
+@{
+	Layout = string.Empty;
+	string encodedBody;
+	{
+		var bodyBuilder = new StringBuilder();
+		for(var i = 0; i < Model.Body.Length; i++) {
+			var c = Model.Body[i];
+			switch(c) {
+				case '<':
+				bodyBuilder.Append("&lt;");
+				break;
+				case '>':
+				bodyBuilder.Append("&gt;");
+				break;
+				case '&':
+				bodyBuilder.Append("&amp;");
+				break;
+				default:
+				bodyBuilder.Append(c);
+				break;
+			}
+		}
+		encodedBody = new Markdown().Transform(bodyBuilder.ToString());
+	}
+}
+<h1>@Html.DisplayFor(m => m.Title)</h1>
+@Html.Raw(encodedBody)
