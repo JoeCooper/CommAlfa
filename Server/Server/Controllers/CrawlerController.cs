@@ -10,7 +10,7 @@ using Server.Utilities;
 
 namespace Server.Controllers
 {
-    [Route("sitemap")]
+    [Route("")]
     public class SitemapController: Controller
     {
         readonly DatabaseConfiguration databaseConfiguration;
@@ -18,6 +18,20 @@ namespace Server.Controllers
         public SitemapController(IOptions<DatabaseConfiguration> _databaseConfiguration)
         {
             databaseConfiguration = _databaseConfiguration.Value;
+        }
+
+        [HttpGet("sitemap.xml")]
+        [ResponseCache(CacheProfileName = CacheProfileNames.Sitemap)]
+        public IActionResult GetSitemap()
+        {
+            return new SitemapResult(databaseConfiguration, Url);
+        }
+
+        [HttpGet("robots.txt")]
+        [ResponseCache(CacheProfileName = CacheProfileNames.Sitemap)]
+        public IActionResult GetRobots()
+        {
+            return Content(string.Format("User-agent: *\nSitemap: {0}", Url.Action(nameof(GetSitemap), null, null, "http")), "text/plain");
         }
 
         class SitemapResult : IActionResult
@@ -80,11 +94,6 @@ namespace Server.Controllers
                     }
                 }
             }
-        }
-
-        [ResponseCache(CacheProfileName = CacheProfileNames.Sitemap)]
-        public IActionResult Get() {
-            return new SitemapResult(databaseConfiguration, Url);
         }
     }
 }
