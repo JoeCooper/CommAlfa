@@ -1,6 +1,6 @@
 ﻿@model Server.ViewModels.IdentifierViewModel
 <div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
-<div id='scaffolding'>
+<div id='scaffolding' hidden>
 	<table class="title"><tr>
 	    <td><h1 id='title'>…</h1></td>
 	    <td><a asp-action="Edit">Edit</a></td>
@@ -15,16 +15,8 @@
 </div>
 @section Scripts {
 <script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
+
 <script>
-$("#scaffolding").hide();
-var partsToLoad = 3;
-function advanceLoading() {
-	partsToLoad--;
-	if(partsToLoad <= 0) {
-		$('#busyIndicator').remove();
-		$("#scaffolding").show();
-	}
-}
 function escapeHtml(text) {
 	var map = {
 		'&': '&amp;',
@@ -37,18 +29,21 @@ function escapeHtml(text) {
 }
 function consumeDocumentBody(data) {
 	$('#documentBody').html(marked(escapeHtml(data)));
-	advanceLoading();
+    loadPop();
 }
 function consumeAuthorMetadata(data) {
 	$('#authorDisplayName').html(escapeHtml(data.displayName));
-	advanceLoading();
+    loadPop();
 }
 function consumeDocumentMetadata(data) {
 	$('#title').html(marked(escapeHtml(data.title)));
 	$('#timestamp').html(escapeHtml(data.timestamp));
+    loadPush();
 	$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata);
-	advanceLoading();
+    loadPop();
 }
+loadPush();
+loadPush();
 $.get('/api/documents/@(Model.Id)', consumeDocumentBody);
 $.getJSON('/api/documents/@(Model.Id)/metadata', consumeDocumentMetadata);
 </script>
