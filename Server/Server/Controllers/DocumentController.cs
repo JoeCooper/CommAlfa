@@ -237,7 +237,7 @@ namespace Server.Controllers
 			return View("Document", new IdentifierViewModel(id));
 		}
 
-		[HttpGet("{id}/flattened")]
+		[HttpGet("{id}/indexable")]
 		[ResponseCache(CacheProfileName = CacheProfileNames.SemiImmutable)]
 		public async Task<IActionResult> GetDocumentForIndexing(string id)
 		{
