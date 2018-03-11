@@ -34,21 +34,14 @@
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
                     <li><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
-                    @if (User.Identity.IsAuthenticated) {
-                        <li><a asp-area="" asp-controller="Document" asp-action="Edit" asp-route-id="new">New</a></li>
-                        <li><a asp-area="" asp-controller="Account" asp-action="Index">Account</a></li>
-                        <li><a asp-area="" asp-controller="Account" asp-action="Logout">Sign out</a></li>
-                    }
-                    else {
-                        <li><a asp-area="" asp-controller="Account" asp-action="Login">Sign in</a></li>
-                    }
+                    <li><a asp-area="" asp-controller="Document" asp-action="Edit" asp-route-id="new">New</a></li>
+                    <li><a asp-area="" asp-controller="Account" asp-action="Index">Account</a></li>
                 </ul>
             </div>
         </div>
     </nav>
     <div class="container body-content">
         @RenderBody()
-        <!--<footer></footer>-->
     </div>
         
     <environment include="Development">

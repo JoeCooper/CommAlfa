@@ -229,7 +229,8 @@ namespace Server.Controllers
 			}
 		}
 
-		[HttpGet("{id}")]
+        [HttpGet("{id}")]
+        [ResponseCache(CacheProfileName = CacheProfileNames.SemiImmutable)]
 		public IActionResult GetDocument(string id)
 		{
 			if (id.FalsifyAsIdentifier())

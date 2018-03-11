@@ -3,7 +3,10 @@
     ViewData["Title"] = "Account";
 }
 <table class="title"><tr>
-    <td><h1>@Html.DisplayFor(m => m.DisplayName)</h1></td>
+    <td>
+        <h1>@Html.DisplayFor(m => m.DisplayName)</h1>
+        <div><a asp-area="" asp-controller="Account" asp-action="Logout">Sign out</a></div>
+    </td>
     <td><img class="avatar" src="https://www.gravatar.com/avatar/@Model.GravatarHash" /></td>
 </tr></table>
 <h2>Documents</h2>
