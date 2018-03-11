@@ -65,6 +65,9 @@ namespace Server.Controllers
             submissionModel.Title = submissionModel.Title ?? string.Empty;
             submissionModel.Body = submissionModel.Body ?? string.Empty;
 
+            submissionModel.Title = submissionModel.Title.Trim();
+            submissionModel.Body = submissionModel.Body.Trim();
+
 			if(submissionModel.Title.Length > inputConfiguration.TitleLengthLimit) {
 				return StatusCode(413);
 			}
