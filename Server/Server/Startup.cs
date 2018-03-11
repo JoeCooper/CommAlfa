@@ -84,6 +84,12 @@ namespace Server
 						Location = ResponseCacheLocation.Any,
 						Duration = 31536000
 					});
+                options.CacheProfiles.Add(CacheProfileNames.Sitemap,
+                    new CacheProfile()
+                    {
+                        Location = ResponseCacheLocation.Any,
+                        Duration = 86400
+                    });
 			});
 
 			services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
