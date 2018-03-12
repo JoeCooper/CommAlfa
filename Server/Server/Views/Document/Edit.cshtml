@@ -1,71 +1,40 @@
-﻿@model Server.ViewModels.DocumentViewModel
+﻿@model Server.ViewModels.IdentifierViewModel
 @using Microsoft.Extensions.Options
-@inject IOptions<InputConfiguration> InputConfiguration
-@{
-	var mergeUrlReplacementKey = Guid.NewGuid().ToString();
-}
 @using Microsoft.AspNetCore.WebUtilities;
 @using System.Linq;
+@inject IOptions<InputConfiguration> InputConfiguration
+<div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
+<div id='scaffolding' hidden>
 <form name='document' method="post" onsubmit="return onSubmit();">
-    @foreach(var source in Model.Sources) {
-	    <input type="hidden" name="AntecedentIdBase64" value="@(source.Id.ToString())" />
-    }
     <table class="title">
 		<tr>
-	        <td><h1>@Html.EditorFor(m => m.Title, new { htmlAttributes = new { placeholder = "Title", maxlength = InputConfiguration.Value.TitleLengthLimit } })</h1></td>
+			<td><h1><input id='title' type='text' name='Title' maxlength='@(InputConfiguration.Value.TitleLengthLimit)' placeholder='Title' /></h1></td>
 	        <td class="action"><input type="submit" value="Save" /></td>
-			<td style='width:100%;'></td>
-		    <td>
-				@if(Model.Sources.Any()) {
-					<a asp-action="GetDocument">Cancel</a>
-				}
+			<td style='width:100%;' />
+		    <td><a asp-action="GetDocument">Cancel</a>
 			</td>
 	    </tr>
-		@if(Model.Sources.Count() > 1) {
-		    <tr>
-				<td colspan='4'>
-					<h2>Sources</h2>
-				</td>
-			</tr>
-			@foreach(var source in Model.Sources) {
-			    <tr>
-					<td colspan='4'>
-						<div>“@Html.DisplayFor(m => source.Title)” (@Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp))</div>
-					</td>
-				</tr>
-			}
-		} else if(Model.Sources.Any()) {
-			@foreach(var source in Model.Sources) {
-			    <tr>
-					<td colspan='4'>
-							Saved by @Html.DisplayFor(m => source.AuthorDisplayName) on @Html.DisplayFor(m => source.Timestamp)
-							@if(Model.Comparables.Any()) {
-								<select id='mergeSelect' onchange='onSelectMerge()'>
-									<option value="" disabled selected>Merge with…</option>
-									@foreach(var c in Model.Comparables ) {
-										<option value="@(c.Id.ToString())">
-										“@Html.DisplayFor(m => c.Title)” (@Html.DisplayFor(m => c.AuthorDisplayName) on @Html.DisplayFor(m => c.Timestamp))
-										</option>
-									}
-								</select>
-							}
-					</td>
-				</tr>
-			}
-		}
+		<tr>
+			<td colspan='4'>
+				<select id='mergeSelect' onchange='onSelectMerge()'>
+					<option value="" selected>Merge with…</option>
+				</select>
+			</td>
+		</tr>
 	</table>
-	<div>
-	    @Html.EditorFor(m => m.Body, new { htmlAttributes = new { maxlength = InputConfiguration.Value.BodyLengthLimit } })
-	</div>
+	<h2>Sources</h2>
+	<ul id='sources'>
+	</ul>
+	<textarea id='documentBody' name='Body' maxlength='@(InputConfiguration.Value.BodyLengthLimit)'></textarea>
 </form>
+</div>
 @section Head {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.css">
 }
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jsdiff/3.5.0/diff.min.js'></script>
 <script>
-var bodyEditor = document.getElementById('Body');
-var inscrybmde = new InscrybMDE({ element: bodyEditor });
 const titleLengthLimit = @(InputConfiguration.Value.TitleLengthLimit);
 const bodyLengthLimit = @(InputConfiguration.Value.BodyLengthLimit);
 function onSubmit() {
@@ -80,15 +49,140 @@ function onSubmit() {
 	return true;
 }
 </script>
-@if(Model.Sources.Any()) {
+<script>
+	var source = [];
+	var inscrybmde = null;
+	function onComplete() {
+		var body;
+		var title;
+		if(sources.length == 1) {
+			body = sources[0].body;
+			title = sources[0].title;
+		}
+		else if(sources.length == 2) {
+			title = sources[0].title;
+			var diff = JsDiff.diffLines(sources[0].body, sources[1].body);
+			body = '';
+			diff.forEach(function(part) {
+				var line;
+				if(part.added) line = '+ ' + part.value;
+				else if(part.removed) line = '- ' + part.value;
+				else line = part.value;
+				body += line;
+			});
+		}
+		else {
+		}
+		var sourcesElement = $('#sources');
+		sourcesElement.empty();
+		for(var i = 0; i < sources.length; i++) {
+			var source = sources[i];
+			sourcesElement.append('<li>“' + source.title + '” (' + source.authorMetadata.displayName + ') on ' + source.timestamp +
+				"<input type='hidden' name='AntecedentIdBase64' value='" + source.id + "' /></li>"
+			);
+		}
+		$('#title').val(title);
+		if(inscrybmde != null) {
+			inscrybmde.toTextArea();
+			inscrybmde = null;
+		}
+		var bodyEditor = document.getElementById('documentBody');
+		inscrybmde = new InscrybMDE({ element: bodyEditor, initialValue: body });
+	}
+	var comparables = [];
+	var relations;
+	var relatives = [];
+	var relativesToLoad = 0;
+	var mergeList = $('#mergeSelect');
+	function consumeAuthorMetadataAndComparable(comparable) {
+		return function(authorMetadata) {
+			mergeList.append("<option value='" + comparable.id + "'>“" + comparable.title + "” (" + authorMetadata.displayName + ") on " + comparable.timestamp + "</option>" );
+		};
+	}
+	function buildComparables() {
+		for(var i = 0; i < relatives.length; i++) {
+			var relative = relatives[i];
+			if(relative.id != '@Model.Id.ToString()') {
+				var supercedingEdges = relations.filter(function(r) { return r.antecedentId === relative.id; });
+				var supercedingDocumentIds = supercedingEdges.map(function(e) { return e.descendantId; });
+				var supercedingDocuments = relatives.filter(function(d) { return supercedingDocumentIds.some(function(id) { return id === d.id; }); } );
+				var isSupercededBySameAuthor = supercedingDocuments.some(function(d) { return d.authorId === relative.authorId; });
+				if(!isSupercededBySameAuthor) {
+					comparables.push(relative);
+				}
+			}
+		}
+		for(var i = 0; i < comparables.length; i++) {
+			var comparable = comparables[i];
+			$.getJSON('/api/accounts/' + comparable.authorId + '/metadata', consumeAuthorMetadataAndComparable(comparable));
+		}
+	}
+	function consumeRelative(relative) {
+		relatives.push(relative);
+		if(relatives.length == relativesToLoad) {
+			buildComparables();
+		}
+	}
+	function consumeFamily(_relations) {
+		relations = _relations;
+		var allKeys = {}
+		for(var i = 0; i < relations.length; i++) {
+			var r = relations[i];
+			allKeys[r.antecedentId] = true;
+			allKeys[r.descendantId] = true;
+		}
+		for(var key in allKeys) {
+			relativesToLoad++;
+			$.getJSON('/api/documents/' + key + '/metadata', consumeRelative);
+		}
+	}
+	function consumeDocumentBody(target) {
+		return function (data) {
+			target.body = data;
+			loadPop(onComplete);
+		}
+	}
+	function consumeAuthorMetadata(target) {
+		return function (data) {
+			target.authorMetadata = data
+			loadPop(onComplete);
+		}
+	}
+	function consumeDocumentMetadata(target) {
+		return function (data) {
+			target.title = data.title;
+			target.timestamp = escapeHtml(data.timestamp);
+			loadPush();
+			$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata(target));
+			loadPop(onComplete);
+		}
+	}
+	function loadSources(sourceIds) {
+		sources = []
+		for(var i = 0; i < sourceIds.length; i++) {
+			var sourceId = sourceIds[i];
+			var source = { id: sourceId }
+			sources.push(source)
+			loadPush();
+			loadPush();
+			$.get('/api/documents/' + sourceId, consumeDocumentBody(source));
+			$.getJSON('/api/documents/' + sourceId + '/metadata', consumeDocumentMetadata(source));
+		}
+	}
+	$.getJSON('/api/documents/@Model.Id.ToString()/family', consumeFamily);
+	loadSources([ '@Model.Id.ToString()' ]);
+</script>
 <script>
 function onSelectMerge() {
-	const replacementCode = '@(mergeUrlReplacementKey)';
-	const mergeUrl = '@Url.Action("Edit","Document",new {id=Model.Sources.First().Id,secondId=mergeUrlReplacementKey})';
 	var mergeSelect = document.getElementById('mergeSelect');
 	var otherDocumentKey = mergeSelect.value;
-	window.location.href = mergeUrl.replace(replacementCode, otherDocumentKey);
+	console.log(otherDocumentKey);
+	if(otherDocumentKey == '') {
+		loadSources([ '@Model.Id.ToString()' ]);
+	}
+	else {
+		loadSources([ '@Model.Id.ToString()', otherDocumentKey ]);
+	}
 }
 </script>
-}
 }

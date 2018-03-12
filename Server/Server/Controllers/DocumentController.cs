@@ -154,86 +154,20 @@ namespace Server.Controllers
             var submissionIdAsBase64 = WebEncoders.Base64UrlEncode(submissionId);
 
             return RedirectToAction(nameof(GetDocument), new { id = submissionIdAsBase64 });
-        }
+		}
 
-        [Authorize]
+		[Authorize]
 		[HttpGet("{id}/edit")]
-		public async Task<IActionResult> Edit(string id, string secondId)
-        {
-			try
-			{
-				DocumentViewModel viewModel;
-				if (id == "new")
-				{
-					viewModel = new DocumentViewModel(NewDocumentBody, string.Empty);
-				}
-				else
-				{
-					if (id.FalsifyAsIdentifier())
-						return BadRequest();
-					if (secondId != null && secondId.FalsifyAsIdentifier())
-						return BadRequest();
-					var idInBinary = WebEncoders.Base64UrlDecode(id);
-					var idInMD5Sum = new MD5Sum(idInBinary);
-					using (var connection = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-					{
-						await connection.OpenAsync();
-						viewModel = await GetDocumentViewModelAsync(connection, idInMD5Sum);
-						var relations = await GetRelation(connection, idInMD5Sum);
-						var antecedents = ImmutableHashSet.CreateRange(relations.Select(r => r.AntecedentId));
-						var tips = relations.Select(r => r.DescendantId).Where(d => !antecedents.Contains(d)).Where(d => !d.Equals(idInMD5Sum));
-						var documentListings = await GetDocumentListingsAsync(connection, tips);
-						var accountListings = await GetAccountListingsAsync(connection, documentListings.Select(d => d.AuthorId));
-						documentListings = EnrichDocumentListings(documentListings, accountListings);
-						viewModel = viewModel.WithComparables(documentListings.Where(dl => !dl.Id.Equals(idInMD5Sum)));
-
-						if (secondId != null)
-						{
-							var secondIdInBinary = WebEncoders.Base64UrlDecode(secondId);
-							var secondIdInMD5Sum = new MD5Sum(secondIdInBinary);
-							var secondViewModel = await GetDocumentViewModelAsync(connection, secondIdInMD5Sum);
-
-							var diffBuilder = new InlineDiffBuilder(new Differ());
-							var diff = diffBuilder.BuildDiffModel(viewModel.Body, secondViewModel.Body);
-
-							var bodyBuilder = new StringBuilder();
-
-							foreach (var line in diff.Lines)
-							{
-								switch (line.Type)
-								{
-									case ChangeType.Inserted:
-										bodyBuilder.Append("+ ");
-										break;
-									case ChangeType.Deleted:
-										bodyBuilder.Append("- ");
-										break;
-								}
-								bodyBuilder.AppendLine(line.Text);
-							}
-
-							viewModel = new DocumentViewModel(bodyBuilder.ToString(), viewModel.Title, viewModel.Sources.Concat(secondViewModel.Sources), viewModel.Comparables);
-						}
-					}
-				}
-				return View("Edit", viewModel);
-			}
-			catch (FileNotFoundException)
-			{
-				return NotFound();
-			}
-			catch (DocumentBlockedException ex)
-			{
-				if (ex.IsBlockVoluntary)
-				{
-					return StatusCode(410);
-				}
-				return StatusCode(451);
-			}
+		[ResponseCache(CacheProfileName = CacheProfileNames.Default)]
+		public IActionResult Edit(string id)
+		{
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
+			return View("Edit", new IdentifierViewModel(id));
 		}
 
         [HttpGet("{id}")]
-        [ResponseCache(CacheProfileName = CacheProfileNames.SemiImmutable)]
+		[ResponseCache(CacheProfileName = CacheProfileNames.Default)]
 		public IActionResult GetDocument(string id)
 		{
 			if (id.FalsifyAsIdentifier())

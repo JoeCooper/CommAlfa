@@ -2,12 +2,12 @@
 <div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
 <div id='scaffolding' hidden>
 	<table class="title"><tr>
-	    <td><h1 id='title'>…</h1></td>
+	    <td><h1 id='title'></h1></td>
 	    <td><a asp-action="Edit">Edit</a></td>
 	    <td><a asp-action="GetHistory">History</a></td>
 	</tr>
 	    <tr><td colspan="3">
-	    Saved by <span id='authorDisplayName'></span> on <span id='timestamp'>…</span>
+	    Saved by <span id='authorDisplayName'></span> on <span id='timestamp'></span>
 	    </td></tr>
 	</table>
 	<hr />
@@ -15,18 +15,7 @@
 </div>
 @section Scripts {
 <script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
-
 <script>
-function escapeHtml(text) {
-	var map = {
-		'&': '&amp;',
-		'<': '&lt;',
-		'>': '&gt;',
-		'"': '&quot;',
-		"'": '&#039;'
-	};
-	return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-}
 function consumeDocumentBody(data) {
 	$('#documentBody').html(marked(escapeHtml(data)));
     loadPop();

@@ -4,8 +4,11 @@ function loadPush() {
     loadState++;
     loadUpdateViews();
 }
-function loadPop() {
+function loadPop(onComplete = function () {}) {
     loadState--;
+    if(loadState == 0) {
+	    onComplete();
+    }
     loadUpdateViews();
 }
 function loadUpdateViews() {
@@ -17,4 +20,14 @@ function loadUpdateViews() {
         $("#busyIndicator").hide();
         $("#scaffolding").show();
     }
+}
+function escapeHtml(text) {
+	var map = {
+	'&': '&amp;',
+	'<': '&lt;',
+	'>': '&gt;',
+	'"': '&quot;',
+	"'": '&#039;'
+	};
+	return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
