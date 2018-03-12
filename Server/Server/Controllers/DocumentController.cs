@@ -181,16 +181,72 @@ namespace Server.Controllers
 			if (id.FalsifyAsIdentifier())
 				return BadRequest();
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
-			var idInMD5Sum = new MD5Sum(idInBinary);
-			DocumentViewModel viewModel;
+			var idBoxedInGuidForDatabase = new Guid(idInBinary);
 			try
 			{
-				using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
+				using (var connection = new NpgsqlConnection(databaseConfiguration.ConnectionString))
 				{
-					await conn.OpenAsync();
-					viewModel = await GetDocumentViewModelAsync(conn, idInMD5Sum);
+					await connection.OpenAsync();
+
+					using (var cmd = new NpgsqlCommand())
+					{
+						cmd.Connection = connection;
+						cmd.CommandText = "SELECT isVoluntary FROM documentBlock WHERE id=@id;";
+						cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
+
+						using (var reader = await cmd.ExecuteReaderAsync())
+						{
+							if (await reader.ReadAsync())
+							{
+								throw new DocumentBlockedException(reader.GetBoolean(0));
+							}
+						}
+					}
+
+					string title;
+
+					using (var cmd = new NpgsqlCommand())
+					{
+						cmd.Connection = connection;
+						cmd.CommandText = "SELECT title FROM document WHERE id=@id;";
+						cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
+
+						using (var reader = await cmd.ExecuteReaderAsync())
+						{
+							if (await reader.ReadAsync())
+							{
+								title = reader.GetString(0);
+							}
+							else
+							{
+								throw new FileNotFoundException();
+							}
+						}
+					}
+
+					string body;
+
+					using (var cmd = new NpgsqlCommand())
+					{
+						cmd.Connection = connection;
+						cmd.CommandText = "SELECT body FROM documentBody WHERE id=@id;";
+						cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
+
+						using (var reader = await cmd.ExecuteReaderAsync())
+						{
+							if (await reader.ReadAsync())
+							{
+								body = reader.GetString(0);
+							}
+							else
+							{
+								throw new FileNotFoundException();
+							}
+						}
+					}
+
+					return View("DocumentForIndexing", new DocumentViewModel(body, title));
 				}
-				return View("DocumentForIndexing", viewModel);
 			}
 			catch (FileNotFoundException)
 			{
@@ -204,90 +260,6 @@ namespace Server.Controllers
 				}
 				return StatusCode(451);
 			}
-		}
-
-		async Task<DocumentViewModel> GetDocumentViewModelAsync(NpgsqlConnection connection, MD5Sum id)
-		{
-			var idBoxedInGuidForDatabase = id.ToGuid();
-
-			using (var cmd = new NpgsqlCommand())
-			{
-				cmd.Connection = connection;
-				cmd.CommandText = "SELECT isVoluntary FROM documentBlock WHERE id=@id;";
-				cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-				using (var reader = await cmd.ExecuteReaderAsync())
-				{
-					if (await reader.ReadAsync())
-					{
-						throw new DocumentBlockedException(reader.GetBoolean(0));
-					}
-				}
-			}
-
-			DocumentListingViewModel sourceDescription;
-			string title;
-
-			using (var cmd = new NpgsqlCommand())
-			{
-				cmd.Connection = connection;
-				cmd.CommandText = "SELECT title,authorId,timestamp FROM document WHERE id=@id;";
-				cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-				using (var reader = await cmd.ExecuteReaderAsync())
-				{
-					if (await reader.ReadAsync())
-					{
-						title = reader.GetString(0);
-						var authorId = reader.GetGuid(1);
-						var timestamp = reader.GetDateTime(2);
-						sourceDescription = new DocumentListingViewModel(id, title, authorId, timestamp);
-					}
-					else
-					{
-						throw new FileNotFoundException();
-					}
-				}
-			}
-
-			string body;
-
-			using (var cmd = new NpgsqlCommand())
-			{
-				cmd.Connection = connection;
-				cmd.CommandText = "SELECT body FROM documentBody WHERE id=@id;";
-				cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-				using (var reader = await cmd.ExecuteReaderAsync())
-				{
-					if (await reader.ReadAsync())
-					{
-						body = reader.GetString(0);
-					}
-					else
-					{
-						throw new FileNotFoundException();
-					}
-				}
-			}
-
-			using (var cmd = new NpgsqlCommand())
-			{
-				cmd.Connection = connection;
-				cmd.CommandText = "SELECT displayName FROM account WHERE id=@id;";
-				cmd.Parameters.AddWithValue("@id", sourceDescription.AuthorId);
-
-				using (var reader = await cmd.ExecuteReaderAsync())
-				{
-					if (await reader.ReadAsync())
-					{
-						var authorDisplayName = reader.GetString(0);
-						sourceDescription = sourceDescription.WithAuthorDisplayName(authorDisplayName);
-					}
-				}
-			}
-
-			return new DocumentViewModel(body, title, new[] { sourceDescription }, Enumerable.Empty<DocumentListingViewModel>());
 		}
 
 		async Task<IEnumerable<Relation>> GetRelation(NpgsqlConnection connection, MD5Sum documentId) {
