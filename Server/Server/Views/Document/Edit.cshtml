@@ -32,24 +32,22 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.css">
 }
 @section Scripts {
-<script src="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js'></script>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/jsdiff/3.5.0/diff.min.js'></script>
 <script>
-const titleLengthLimit = @(InputConfiguration.Value.TitleLengthLimit);
-const bodyLengthLimit = @(InputConfiguration.Value.BodyLengthLimit);
-function onSubmit() {
-	if(document.forms['document']['Title'].value.length > titleLengthLimit) {
-		alert('Title is too long. Maximum length: ' + titleLengthLimit);
-		return false;
+	const titleLengthLimit = @(InputConfiguration.Value.TitleLengthLimit);
+	const bodyLengthLimit = @(InputConfiguration.Value.BodyLengthLimit);
+	function onSubmit() {
+		if(document.forms['document']['Title'].value.length > titleLengthLimit) {
+			alert('Title is too long. Maximum length: ' + titleLengthLimit);
+			return false;
+		}
+		if(document.forms['document']['Body'].value.length > bodyLengthLimit) {
+			alert('Document is too long. Maximum length: ' + bodyLengthLimit);
+			return false;
+		}
+		return true;
 	}
-	if(document.forms['document']['Body'].value.length > bodyLengthLimit) {
-		alert('Document is too long. Maximum length: ' + bodyLengthLimit);
-		return false;
-	}
-	return true;
-}
-</script>
-<script>
 	var source = [];
 	var inscrybmde = null;
 	function onComplete() {
@@ -171,18 +169,16 @@ function onSubmit() {
 	}
 	$.getJSON('/api/documents/@Model.Id.ToString()/family', consumeFamily);
 	loadSources([ '@Model.Id.ToString()' ]);
-</script>
-<script>
-function onSelectMerge() {
-	var mergeSelect = document.getElementById('mergeSelect');
-	var otherDocumentKey = mergeSelect.value;
-	console.log(otherDocumentKey);
-	if(otherDocumentKey == '') {
-		loadSources([ '@Model.Id.ToString()' ]);
+	function onSelectMerge() {
+		var mergeSelect = document.getElementById('mergeSelect');
+		var otherDocumentKey = mergeSelect.value;
+		console.log(otherDocumentKey);
+		if(otherDocumentKey == '') {
+			loadSources([ '@Model.Id.ToString()' ]);
+		}
+		else {
+			loadSources([ '@Model.Id.ToString()', otherDocumentKey ]);
+		}
 	}
-	else {
-		loadSources([ '@Model.Id.ToString()', otherDocumentKey ]);
-	}
-}
 </script>
 }

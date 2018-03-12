@@ -16,9 +16,6 @@ using System.Security.Cryptography;
 using System.Reflection;
 using System.IO;
 using Server.Utilities;
-using DiffPlex;
-using DiffPlex.DiffBuilder;
-using DiffPlex.DiffBuilder.Model;
 
 namespace Server.Controllers
 {
@@ -161,6 +158,8 @@ namespace Server.Controllers
 		[ResponseCache(CacheProfileName = CacheProfileNames.Default)]
 		public IActionResult Edit(string id)
 		{
+			if (id.Equals("new"))
+				return View("New", new DocumentViewModel(NewDocumentBody, string.Empty));
 			if (id.FalsifyAsIdentifier())
 				return BadRequest();
 			return View("Edit", new IdentifierViewModel(id));

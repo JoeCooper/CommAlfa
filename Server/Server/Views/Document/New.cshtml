@@ -1,0 +1,36 @@
+﻿@model Server.ViewModels.DocumentViewModel
+@using Microsoft.Extensions.Options
+@inject IOptions<InputConfiguration> InputConfiguration
+<form name='document' method="post" onsubmit="return onSubmit();">
+    <table class="title">
+		<tr>
+			<td><h1><input type='text' name='Title' maxlength='@(InputConfiguration.Value.TitleLengthLimit)' placeholder='Title' /></h1></td>
+	        <td class="action"><input type="submit" value="Save" /></td>
+			<td style='width:100%;' />
+	    </tr>
+	</table>
+	<textarea id='documentBody' name='Body' maxlength='@(InputConfiguration.Value.BodyLengthLimit)'>@Model.Body</textarea>
+</form>
+@section Head {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.css">
+}
+@section Scripts {
+<script src='https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.js'></script>
+<script>
+const titleLengthLimit = @(InputConfiguration.Value.TitleLengthLimit);
+const bodyLengthLimit = @(InputConfiguration.Value.BodyLengthLimit);
+function onSubmit() {
+	if(document.forms['document']['Title'].value.length > titleLengthLimit) {
+		alert('Title is too long. Maximum length: ' + titleLengthLimit);
+		return false;
+	}
+	if(document.forms['document']['Body'].value.length > bodyLengthLimit) {
+		alert('Document is too long. Maximum length: ' + bodyLengthLimit);
+		return false;
+	}
+	return true;
+}
+var bodyEditor = document.getElementById('documentBody');
+inscrybmde = new InscrybMDE({ element: bodyEditor });
+</script>
+}
