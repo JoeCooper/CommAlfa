@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using System.Reflection;
 using System.IO;
 using Server.Utilities;
+using Server.Services;
 
 namespace Server.Controllers
 {
@@ -33,12 +34,14 @@ namespace Server.Controllers
                 NewDocumentBody = reader.ReadToEnd();
             }
         }
-        
+
+		readonly IDatabaseService databaseService;
         readonly DatabaseConfiguration databaseConfiguration;
 		readonly InputConfiguration inputConfiguration;
 
-		public DocumentController(IOptions<DatabaseConfiguration> _databaseConfiguration, IOptions<InputConfiguration> _inputConfiguration)
-        {
+		public DocumentController(IDatabaseService databaseService, IOptions<DatabaseConfiguration> _databaseConfiguration, IOptions<InputConfiguration> _inputConfiguration)
+		{
+			this.databaseService = databaseService;
             databaseConfiguration = _databaseConfiguration.Value;
 			inputConfiguration = _inputConfiguration.Value;
         }
@@ -73,17 +76,7 @@ namespace Server.Controllers
 				return StatusCode(413);
 			}
 
-            byte[] submissionId;
-
-            using (var md5Encoder = MD5.Create())
-            {
-                md5Encoder.Initialize();
-                var whole = submissionModel.Title + submissionModel.Body;
-                var buffer = Encoding.UTF8.GetBytes(whole);
-                submissionId = md5Encoder.ComputeHash(buffer);
-            }
-
-            var antecedantIds = ImmutableArray.CreateRange(submissionModel.AntecedentIdBase64.Select(s => WebEncoders.Base64UrlDecode(s)));
+			var antecedantIds = ImmutableArray.CreateRange(submissionModel.AntecedentIdBase64.Select(s => new MD5Sum(WebEncoders.Base64UrlDecode(s))));
 
             Guid authorId;
 
@@ -93,64 +86,9 @@ namespace Server.Controllers
                 authorId = Guid.Parse(nameIdentifierClaim.Value);
             }
 
-            var submissionIdAsGuid = new Guid(submissionId);
+			var submissionId = await databaseService.AddDocumentAsync(authorId, submissionModel.Body, submissionModel.Title, antecedantIds);
 
-            try
-            {
-                using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-                {
-                    await conn.OpenAsync();
-
-                    using (var cmd = new NpgsqlCommand())
-                    {
-                        cmd.Connection = conn;
-                        cmd.CommandText = "INSERT INTO document(id,title,authorId) VALUES(@id,@title,@authorId);";
-                        cmd.Parameters.AddWithValue("@id", submissionIdAsGuid);
-                        cmd.Parameters.AddWithValue("@title", submissionModel.Title);
-                        cmd.Parameters.AddWithValue("@authorId", authorId);
-                        await cmd.ExecuteNonQueryAsync();
-					}
-
-					using (var cmd = new NpgsqlCommand())
-					{
-						cmd.Connection = conn;
-						cmd.CommandText = "INSERT INTO documentBody(id,body) VALUES(@id,@body);";
-						cmd.Parameters.AddWithValue("@id", submissionIdAsGuid);
-						cmd.Parameters.AddWithValue("@body", submissionModel.Body);
-						await cmd.ExecuteNonQueryAsync();
-					}
-
-                    foreach (var antecedantIdBoxedAsGuid in antecedantIds
-                             .Select(bytes => new Guid(bytes))
-                             .Where(antecedantId => antecedantId != submissionIdAsGuid))
-                    {
-                        using (var cmd = new NpgsqlCommand())
-                        {
-                            cmd.Connection = conn;
-                            cmd.CommandText = "INSERT INTO relation(antecedentId,descendantId) VALUES(@antecedentId,@descendantId);";
-                            cmd.Parameters.AddWithValue("@antecedentId", antecedantIdBoxedAsGuid);
-                            cmd.Parameters.AddWithValue("@descendantId", submissionIdAsGuid);
-                            await cmd.ExecuteNonQueryAsync();
-                        }
-                    }
-                }
-            }
-            catch (PostgresException ex)
-            {
-                if(ex.SqlState == "23505") {
-                    //As per the PostgreSQL manual, this is the error code for a uniqueness violation. It
-                    //means this document is already in there (the id is duplicated). If that is the case
-                    //than fall through; the redirect which happens at the end of this method body will work
-                    //the same if the object is already in there.
-                }
-                else {
-                    throw ex;
-                }
-            }
-
-            var submissionIdAsBase64 = WebEncoders.Base64UrlEncode(submissionId);
-
-            return RedirectToAction(nameof(GetDocument), new { id = submissionIdAsBase64 });
+			return RedirectToAction(nameof(GetDocument), new { id = submissionId.ToString() });
 		}
 
 		[Authorize]
@@ -181,123 +119,10 @@ namespace Server.Controllers
 			if (id.FalsifyAsIdentifier())
 				return BadRequest();
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
-			var idBoxedInGuidForDatabase = new Guid(idInBinary);
-			try
-			{
-				using (var connection = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-				{
-					await connection.OpenAsync();
-
-					using (var cmd = new NpgsqlCommand())
-					{
-						cmd.Connection = connection;
-						cmd.CommandText = "SELECT isVoluntary FROM documentBlock WHERE id=@id;";
-						cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-						using (var reader = await cmd.ExecuteReaderAsync())
-						{
-							if (await reader.ReadAsync())
-							{
-								throw new DocumentBlockedException(reader.GetBoolean(0));
-							}
-						}
-					}
-
-					string title;
-
-					using (var cmd = new NpgsqlCommand())
-					{
-						cmd.Connection = connection;
-						cmd.CommandText = "SELECT title FROM document WHERE id=@id;";
-						cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-						using (var reader = await cmd.ExecuteReaderAsync())
-						{
-							if (await reader.ReadAsync())
-							{
-								title = reader.GetString(0);
-							}
-							else
-							{
-								throw new FileNotFoundException();
-							}
-						}
-					}
-
-					string body;
-
-					using (var cmd = new NpgsqlCommand())
-					{
-						cmd.Connection = connection;
-						cmd.CommandText = "SELECT body FROM documentBody WHERE id=@id;";
-						cmd.Parameters.AddWithValue("@id", idBoxedInGuidForDatabase);
-
-						using (var reader = await cmd.ExecuteReaderAsync())
-						{
-							if (await reader.ReadAsync())
-							{
-								body = reader.GetString(0);
-							}
-							else
-							{
-								throw new FileNotFoundException();
-							}
-						}
-					}
-
-					return View("DocumentForIndexing", new DocumentViewModel(body, title));
-				}
-			}
-			catch (FileNotFoundException)
-			{
-				return NotFound();
-			}
-			catch (DocumentBlockedException ex)
-			{
-				if (ex.IsBlockVoluntary)
-				{
-					return StatusCode(410);
-				}
-				return StatusCode(451);
-			}
-		}
-
-		async Task<IEnumerable<Relation>> GetRelation(NpgsqlConnection connection, MD5Sum documentId) {
-			var relationsBuilder = ImmutableHashSet.CreateBuilder<Relation>();
-			var closedSet = ImmutableHashSet.CreateBuilder<Guid>();
-			var openSet = ImmutableHashSet.CreateBuilder<Guid>();
-
-			openSet.Add(documentId.ToGuid());
-
-			while (openSet.Count > 0)
-			{
-				var openSetAsArray = openSet.ToArray();
-				closedSet.UnionWith(openSetAsArray);
-				openSet.Clear();
-
-				using (var cmd = new NpgsqlCommand())
-				{
-					cmd.Connection = connection;
-					cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId, descendantId] && @openSet;";
-					cmd.Parameters.AddWithValue("@openSet", openSetAsArray);
-
-					using (var reader = await cmd.ExecuteReaderAsync())
-					{
-						while (await reader.ReadAsync())
-						{
-							var alfa = reader.GetGuid(0);
-							var bravo = reader.GetGuid(1);
-							openSet.Add(alfa);
-							openSet.Add(bravo);
-							relationsBuilder.Add(new Relation(new MD5Sum(alfa.ToByteArray()), new MD5Sum(bravo.ToByteArray())));
-						}
-					}
-				}
-
-				openSet.ExceptWith(closedSet);
-			}
-
-			return relationsBuilder;
+			var idMD5 = new MD5Sum(idInBinary);
+			var metadata = await databaseService.GetDocumentMetadataAsync(idMD5);
+			var body = await databaseService.GetDocumentBodyAsync(idMD5);
+			return View("DocumentForIndexing", new DocumentViewModel(body, metadata.Title));
 		}
 
 		async Task<IEnumerable<DocumentListingViewModel>> GetDocumentListingsAsync(NpgsqlConnection connection, IEnumerable<MD5Sum> keys)
@@ -381,7 +206,7 @@ namespace Server.Controllers
 			{
 				await conn.OpenAsync();
 
-				relations = await GetRelation(conn, idInMD5Sum);
+				relations = await databaseService.GetFamilyAsync(idInMD5Sum);
 
 				{
 					var allIdsBuilder = ImmutableHashSet.CreateBuilder<MD5Sum>();

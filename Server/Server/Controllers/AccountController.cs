@@ -182,7 +182,7 @@ namespace Server.Controllers
 							var isValid = EvaluatePassword(submission.Password, extantDigest);
 							if (isValid)
 							{
-								account = new Account(guid, displayName);
+								account = new Account(guid, displayName, string.Empty);
 							}
 						}
 					}

@@ -13,7 +13,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 using Npgsql;
+using Server.Middleware;
 using Server.Models;
+using Server.Services;
 using Server.Utilities;
 
 namespace Server
@@ -37,6 +39,8 @@ namespace Server
 			{
 				options.ConnectionString = Environment.GetEnvironmentVariable("POSTGRES_URL");
 			});
+
+			services.AddSingleton<IDatabaseService>(new PostgreSQLDatabaseService(Environment.GetEnvironmentVariable("POSTGRES_URL")));
 
 			services.Configure<InputConfiguration>(options =>
 			{
@@ -120,6 +124,8 @@ namespace Server
 			app.UseStaticFiles();
 
 			app.UseAuthentication();
+
+			app.UseMiddleware(typeof(ErrorHandlingMiddleware));
 
 			app.UseMvc(routes =>
 			{

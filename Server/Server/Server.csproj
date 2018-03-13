@@ -30,6 +30,8 @@
     <Folder Include="Views\Account\DisplayTemplates\" />
     <Folder Include="Utilities\" />
     <Folder Include="Views\Document\DisplayTemplates\" />
+    <Folder Include="Services\" />
+    <Folder Include="Middleware\" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Setup.sql" />
