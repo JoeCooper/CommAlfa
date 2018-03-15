@@ -1,0 +1,81 @@
+﻿@model Server.ViewModels.IdentifierViewModel
+<div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
+<div id='scaffolding' hidden>
+	<table class="title"><tr>
+	    <td>
+	        <h1 id='authorDisplayName'></h1>
+	        <div><a asp-area="" asp-controller="Account" asp-action="Logout">Sign out</a></div>
+	    </td>
+	    <td><img id='authorAvatar' class="avatar" /></td>
+	</tr></table>
+	<h2>Documents</h2>
+	<table id='documents' class="table">
+	    <tr>
+	        <th>Title</th>
+	        <th>Timestamp</th>
+	        <th></th>
+	    </tr>
+	    <tr>
+	        <td></td>
+	        <td></td>
+	        <td><a asp-area="" asp-controller="Document" asp-action="Edit" asp-route-id="new">New</a></td>
+	    </tr>
+	</table>
+</div>
+@section Scripts {
+<script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
+<script>
+var allDocumentKeys = []
+function prerequisiteLoadStart() {
+	mainPageLoad.push();
+}
+function prerequisiteLoadComplete() {
+	mainPageLoad.pop();
+}
+const prerequisiteLoadManager = new LoadManager(prerequisiteLoadStart, prerequisiteLoadComplete);
+const gravatarRoot = 'https://www.gravatar.com/avatar/';
+function consumeAuthorMetadata(data) {
+	$('#authorDisplayName').html(escapeHtml(data.displayName));
+	$('#authorAvatar').attr('src', gravatarRoot + data.gravatarHash);
+	mainPageLoad.pop();
+}
+function consumeDocumentMetadata(data) {
+	var table = $('#documents');
+	var row = $('<tr>');
+	var titleColumn = $('<td>', { html: marked(escapeHtml(data.title)) });
+	var timestampColumn = $('<td>', { html: data.timestamp });
+	var linkColumn = $('<td>');
+	var link = $('<a>', { html: 'View', href: 'derp' })
+	row.append(titleColumn);
+	row.append(timestampColumn);
+	row.append(linkColumn);
+	table.append(row);
+	prerequisiteLoadManager.pop();
+}
+function consumeDescendants(primaryId, data) {
+	return function(data) {
+		var isSuperceded = false;
+		data.forEach(function(id) {
+			isSuperceded = isSuperceded || allDocumentKeys.includes(id);
+		});
+		if(isSuperceded == false) {
+			prerequisiteLoadManager.push();
+			$.getJSON('/api/documents/' + primaryId + '/metadata', consumeDocumentMetadata);
+		}
+		prerequisiteLoadManager.pop();
+	}
+}
+function consumeDocumentKeys(data) {
+	allDocumentKeys = data;
+	allDocumentKeys.forEach(function(key) {
+		prerequisiteLoadManager.push();
+		$.getJSON('/api/documents/' + key + '/descendants', consumeDescendants(key));
+	});
+	prerequisiteLoadManager.pop();
+}
+mainPageLoad.push();
+$.getJSON('/api/accounts/@(Model.Id)/metadata', consumeAuthorMetadata);
+prerequisiteLoadManager.push();
+$.getJSON('/api/accounts/@(Model.Id)/documents', consumeDocumentKeys);
+</script>
+}

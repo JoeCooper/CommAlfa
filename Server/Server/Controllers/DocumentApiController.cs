@@ -38,6 +38,18 @@ namespace Server.Controllers
 			return Ok(relations);
 		}
 
+		[HttpGet("{id}/descendants")]
+		[ResponseCache(CacheProfileName = CacheProfileNames.Default)]
+		public async Task<IActionResult> GetDescendants(string id)
+		{
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
+			var idInBinary = WebEncoders.Base64UrlDecode(id);
+			var docId = new MD5Sum(idInBinary);
+			var descendants = await databaseService.GetDescendantIds(docId);
+			return Ok(descendants);
+		}
+
 		[HttpGet("{id}/metadata")]
 		[ResponseCache(CacheProfileName = CacheProfileNames.Immutable)]
 		public async Task<IActionResult> GetDocumentMetadata(string id)

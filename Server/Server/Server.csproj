@@ -27,7 +27,6 @@
     <Folder Include="ViewModels\" />
     <Folder Include="wwwroot\images\" />
     <Folder Include="Views\Document\" />
-    <Folder Include="Views\Account\DisplayTemplates\" />
     <Folder Include="Utilities\" />
     <Folder Include="Services\" />
     <Folder Include="Middleware\" />

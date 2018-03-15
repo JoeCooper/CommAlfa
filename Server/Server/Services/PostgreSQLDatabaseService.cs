@@ -91,6 +91,61 @@ namespace Server.Services
 			return new MD5Sum(submissionId);
 		}
 
+		public async Task<IEnumerable<MD5Sum>> GetDescendantIds(MD5Sum documentId)
+		{
+			var builder = ImmutableArray.CreateBuilder<MD5Sum>();
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				await connection.OpenAsync();
+
+				using (var cmd = new NpgsqlCommand())
+				{
+					cmd.Connection = connection;
+					cmd.CommandText = "SELECT descendantId FROM relation WHERE antecedentId=@documentId;";
+					cmd.Parameters.AddWithValue("@documentId", documentId.ToGuid());
+
+					using (var reader = await cmd.ExecuteReaderAsync())
+					{
+						while (await reader.ReadAsync())
+						{
+							var figure = reader.GetGuid(0);
+							builder.Add(new MD5Sum(figure.ToByteArray()));
+						}
+					}
+				}
+			}
+
+			return builder;
+		}
+
+		public async Task<IEnumerable<MD5Sum>> GetDocumentsForAccountAsync(Guid id)
+		{
+			var builder = ImmutableArray.CreateBuilder<MD5Sum>();
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				await connection.OpenAsync();
+
+				using (var cmd = new NpgsqlCommand())
+				{
+					cmd.Connection = connection;
+					cmd.CommandText = "SELECT id FROM document WHERE authorId=@authorId;";
+					cmd.Parameters.AddWithValue("@authorId", id);
+
+					using(var reader = await cmd.ExecuteReaderAsync())
+					{
+						while(await reader.ReadAsync()) {
+							var figure = reader.GetGuid(0);
+							builder.Add(new MD5Sum(figure.ToByteArray()));
+						}
+					}
+				}
+			}
+
+			return builder;
+		}
+
 		public async Task<Account> GetAccountAsync(Guid id)
 		{
 			using (var connection = new NpgsqlConnection(connectionString))

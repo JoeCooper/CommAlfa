@@ -39,106 +39,20 @@ namespace Server.Controllers
 
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> Index() {
+        public IActionResult Index() {
             var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
             var id = Guid.Parse(nameIdentifierClaim.Value);
-			return await GetAccount(id);
+			var stringified = WebEncoders.Base64UrlEncode(id.ToByteArray());
+			if (stringified.FalsifyAsIdentifier())
+				return BadRequest();
+			return GetAccount(stringified);
         }
 
         [HttpGet("{id}")]
-		public async Task<IActionResult> GetAccount(string id) {
+		public IActionResult GetAccount(string id) {
 			if (id.FalsifyAsIdentifier())
 				return BadRequest();
-            var idInBinary = WebEncoders.Base64UrlDecode(id);
-            var idAsGuid = new Guid(idInBinary);
-			return await GetAccount(idAsGuid);
-        }
-
-		async Task<IActionResult> GetAccount(Guid accountId) {
-            string displayName;
-            string email;
-            IEnumerable<DocumentListingViewModel> documentListings;
-            IEnumerable<Tuple<Guid, Guid>> boxedRelations;
-
-            using (var conn = new NpgsqlConnection(databaseConfiguration.ConnectionString))
-            {
-                await conn.OpenAsync();
-
-                using (var cmd = new NpgsqlCommand())
-                {
-                    cmd.Connection = conn;
-                    cmd.CommandText = "SELECT displayName,email FROM account WHERE id=@id;";
-                    cmd.Parameters.AddWithValue("@id", accountId);
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        if (await reader.ReadAsync())
-                        {
-                            displayName = reader.GetString(0);
-                            email = reader.GetString(1);
-                        }
-                        else
-                        {
-                            return NotFound();
-                        }
-                    }
-                }
-
-                using (var cmd = new NpgsqlCommand())
-                {
-                    cmd.Connection = conn;
-                    cmd.CommandText = "SELECT id,title,timestamp FROM document WHERE authorId=@authorId;";
-                    cmd.Parameters.AddWithValue("@authorId", accountId);
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        var documentListingBuilder = ImmutableArray.CreateBuilder<DocumentListingViewModel>();
-
-                        while (await reader.ReadAsync())
-                        {
-                            documentListingBuilder.Add(new DocumentListingViewModel(
-                                new MD5Sum(reader.GetGuid(0).ToByteArray()),
-                                reader.GetString(1),
-                                displayName,
-                                accountId,
-                                reader.GetDateTime(2)
-                            ));
-                        }
-
-                        documentListings = documentListingBuilder;
-                    }
-                }
-
-                using(var cmd = new NpgsqlCommand())
-                {
-                    var boxedDocumentIds = documentListings.Select(d => d.Id.ToGuid()).ToArray();
-
-                    cmd.Connection = conn;
-                    cmd.CommandText = "SELECT antecedentId, descendantId FROM relation WHERE ARRAY[antecedentId] <@ @documentIds;";
-                    cmd.Parameters.AddWithValue("@documentIds", boxedDocumentIds);
-
-                    using(var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        var boxedRelationsBuilder = ImmutableArray.CreateBuilder<Tuple<Guid, Guid>>();
-
-                        while(await reader.ReadAsync()) {
-                            boxedRelationsBuilder.Add(new Tuple<Guid, Guid>(reader.GetGuid(0), reader.GetGuid(1)));
-                        }
-
-                        boxedRelations = boxedRelationsBuilder;
-                    }
-                }
-            }
-
-            {
-                var ourDocumentIds = ImmutableHashSet.CreateRange(documentListings.Select(dl => dl.Id.ToGuid()));
-                var supercededDocumentIds = ImmutableHashSet.CreateRange(boxedRelations.Where(r => ourDocumentIds.Contains(r.Item2)).Select(r => r.Item1));
-                documentListings = documentListings.Where(dl => supercededDocumentIds.Contains(dl.Id.ToGuid()) == false);
-            }
-
-			var gravatarHash = email.ToGravatarHash();
-
-			return View("GetAccount", new AccountViewModel(accountId, displayName, gravatarHash, documentListings, false));
+			return View("Account", new IdentifierViewModel(id));
         }
 
         [HttpGet("login")]

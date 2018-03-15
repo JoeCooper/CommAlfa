@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
 using Microsoft.AspNetCore.WebUtilities;
+using Newtonsoft.Json;
+using Server.Utilities;
 
 namespace Server.Models
 {
+	[JsonConverter(typeof(IdentifierConverter))]
     public class MD5Sum
     {
         readonly byte[] body;

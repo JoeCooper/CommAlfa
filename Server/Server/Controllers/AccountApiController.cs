@@ -33,5 +33,16 @@ namespace Server.Controllers
 			var responseBody = new AccountMetadata(account.Id, account.DisplayName, account.Email.ToGravatarHash());
 			return Ok(responseBody);
 		}
+
+		[HttpGet("{id}/documents")]
+		[ResponseCache(CacheProfileName = CacheProfileNames.Default)]
+		public async Task<IActionResult> GetAccountDocuments(string id)
+		{
+			if (id.FalsifyAsIdentifier())
+				return BadRequest();
+			var guid = new Guid(WebEncoders.Base64UrlDecode(id));
+			var documentKeys = await databaseService.GetDocumentsForAccountAsync(guid);
+			return Ok(documentKeys);
+		}
 	}
 }
