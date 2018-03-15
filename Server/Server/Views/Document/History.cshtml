@@ -289,7 +289,6 @@ function familyLoaded(data) {
 		documentLoadManager.push();
 		$.getJSON('/api/documents/' + key + '/metadata', documentLoaded);
 	}
-	mainPageLoad.pop();
 	prerequisiteLoadManager.pop();
 }
 prerequisiteLoadManager.push();
