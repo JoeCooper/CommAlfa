@@ -35,9 +35,6 @@ table.title td {
     vertical-align: baseline;
     padding-right: 1em;
 }
-table.title {
-	margin-bottom: 1em
-}
 
 table.accountList {
 	border-collapse: separate;

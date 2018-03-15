@@ -1,120 +1,297 @@
-﻿@model Server.ViewModels.HistoryViewModel
-@using System.Collections.Immutable;
-@using System.Linq;
-@using System.Net;
-@using Server.ViewModels;
-@using System.Text.Encodings.Web;
+﻿@model Server.ViewModels.IdentifierViewModel
 @{
-    var documentCount = Model.DocumentsInFamily.Count();
-    var documentsInOrder = ImmutableArray.CreateRange(Model.DocumentsInFamily.OrderBy(d => d.Timestamp));
-    IEnumerable<DocumentListingViewModel> allTips;
-    {
-        var antecedentSet = ImmutableHashSet.CreateRange(Model.Relations.Select(r => r.AntecedentId));
-        allTips = Model.DocumentsInFamily.Where(d => !antecedentSet.Contains(d.Id));
-    }
-
-    var documentsInLanes = new HashSet<MD5Sum>();
-
-    var lanes = new List<MutableLane>(allTips.Select(t => new MutableLane(t)));
-
-    for(var i = 0; i < lanes.Count; i++) {
-        var lane = lanes[i];
-        System.Diagnostics.Debug.Assert(lane.Count() == 1);
-        var d = lane.First();
-        do {
-            System.Diagnostics.Debug.Assert(d != null);
-            //Find the singular antecedant. If there are multiple antecedants, they go to new lanes.
-            var antecedentIds = Model.Relations.Where(r => r.DescendantId.Equals(d.Id)).Select(r => r.AntecedentId);
-            var antecedents = antecedentIds.Select(id => Model.DocumentsInFamily.Single(dl => dl.Id.Equals(id)));
-            var next = antecedents.FirstOrDefault(dl => !documentsInLanes.Contains(dl.Id) && dl.AuthorId.Equals(lane.AuthorId));
-            foreach(var antecedent in antecedents) {
-                if(documentsInLanes.Contains(antecedent.Id)) {
-                    //this is already represented
-                } else if(antecedent.AuthorId.Equals(lane.AuthorId)) {
-                    lane.Add(antecedent);
-                } else {
-                    lanes.Add(new MutableLane(antecedent));
-                }
-                documentsInLanes.Add(antecedent.Id);
-            }
-            d = next;
-        } while(d != null);
-    }
-
-    var authorIds = Model.DocumentsInFamily.Select(d => d.AuthorId).Distinct().OrderBy(id => id);
-    lanes = lanes.OrderBy(l => l.AuthorId).ToList();
-
-    var coords = new Dictionary<MD5Sum,Tuple<float,float>>();
-
-    for(var laneIndex = 0; laneIndex < lanes.Count; laneIndex++) {
-        foreach(var d in lanes[laneIndex]) {
-            var index = documentsInOrder.IndexOf(d);
-            var x = 0.5f + (float) index;
-            var y = 0.5f + (float) laneIndex;
-            coords[d.Id] = new Tuple<float,float>(x, y);
-        }
-    }
-
-    const double rowHeightEm = 1.2;
+	var replacementCode = Guid.NewGuid().ToString();
+	var archetypicalDocumentLink = Url.Action("GetDocument","Document",new {id=replacementCode});
+	var archetypicalAccountLink = Url.Action("GetAccount","Account",new {id=replacementCode});
 }
-<table class="title"><tr>
-    <td><h1>@Html.DisplayFor(m => m.Title)</h1></td>
-    <td><a asp-action="GetDocument">View</a>
-    </td>
-</tr>
-    <tr><td colspan="2">
-    Saved by @Html.DisplayFor(m => m.AuthorDisplayName)
-   on @Html.DisplayFor(m => m.Timestamp)
-    </td></tr>
-</table>
-<h2>Contributors</h2>
-<p>This list does not include persons who may have constributed to other versions of this document.</p>
-<table class='accountList'>
-@Html.DisplayFor(m => m.Contributors)
-</table>
-<h2>History</h2>
-<table id="history"><tr>
-    <td>
-        @{{
-            var i = 0;
-            foreach(var authorId in authorIds) {
-                var c = ((i/2)*2 == i) ? "even" : "odd";
-                i++;
-                var authorDisplayName = Model.DocumentsInFamily.First(d => d.AuthorId.Equals(authorId)).AuthorDisplayName;
-                var laneCount = lanes.Count(l => l.AuthorId.Equals(authorId));
-                <div class='@(c)' style="height:@(laneCount*rowHeightEm)em;line-height:@(rowHeightEm)">
-                    @HtmlEncoder.Default.Encode(authorDisplayName)
-                </div>           
-            }
-        }}
-    </td>
-    <td>
-        <svg width="@(documentCount*rowHeightEm)em" height="@(lanes.Count*rowHeightEm)em" viewBox="0 0 @(documentCount) @(lanes.Count)"
-				xmlns:xlink="http://www.w3.org/1999/xlink">
-            @{
-                var rowOffsetAccumulator = 0;
-                for(var i = 0; i < authorIds.Count(); i++) {
-                    var a = authorIds.ElementAt(i);
-                    var c = ((i/2)*2 == i) ? "even" : "odd";
-                    var h = lanes.Count(l => l.AuthorId.Equals(a));
-                    rowOffsetAccumulator += h;
-                    <rect width="@(documentCount)" y='@(rowOffsetAccumulator-h)' height="@(h)" class="@(c)" />
-                }
-            }
-            @foreach(var r in Model.Relations) {
-                var alfa = coords[r.AntecedentId];
-                var bravo = coords[r.DescendantId];
-                <path d="M @alfa.Item1 @alfa.Item2 C @(alfa.Item1+1) @alfa.Item2, @(bravo.Item1-1) @bravo.Item2 @bravo.Item1 @bravo.Item2" />
-            }
-            @foreach(var c in coords) {
-				<a xlink:href='@Url.Action("GetDocument","Document",new {id=c.Key})'>
-                <circle class='@(c.Key.Equals(Model.Id) ? "here" : string.Empty)'
-                    cx="@(c.Value.Item1)"
-                    cy="@(c.Value.Item2)"
-                    r="0.25" /></a>
-            }
-        </svg>
-    </td>
-</tr></table>
+<div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
+<div id='scaffolding' hidden>
+	<table class="title">
+		<tr>
+		    <td><h1 id='title'></h1></td>
+		    <td><a asp-action="GetDocument">View</a></td>
+		</tr>
+	    <tr><td colspan="2">Saved by <span id='authorDisplayName'></span> on <span id='timestamp'></span></td></tr>
+	</table>
+	<h2>Contributors</h2>
+	<p>This list does not include persons who may have constributed to other versions of this document.</p>
+	<table id='contributorList' class='accountList'>
+	</table>
+	<h2>History</h2>
+	<table id="history"><tr>
+	    <td id='authorListings' />
+	    <td><svg id='graph' xmlns:xlink="http://www.w3.org/1999/xlink" /></td>
+	</tr></table>
+</div>
 @section scripts {
+<script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
+<script>
+class MutableLane {
+	constructor(document) {
+		this.documents = []
+		this.documentKeys = []
+		this.authorId = document.authorId;
+		this.addDocumentMetadata(document);
+	}
+	containsKey(id) {
+		return documentKeys.includes(id);
+	}
+	addDocumentMetadata(d) {
+		this.documentKeys.push(d.id);
+		this.documents.push(d);
+	}
+}
+var documentMetadataById = {}
+var authorMetadataById = {}
+var relations = []
+function prerequisiteLoadStart() {
+	mainPageLoad.push();
+}
+function prerequisiteLoadComplete() {
+	var ourDocumentMetadata = documentMetadataById['@Model.Id.ToString()'];
+	var ourAuthorMetadata = authorMetadataById[ourDocumentMetadata.authorId];
+
+	$('#authorDisplayName').html(escapeHtml(ourAuthorMetadata.displayName));
+	$('#title').html(marked(escapeHtml(ourDocumentMetadata.title)));
+	$('#timestamp').html(escapeHtml(ourDocumentMetadata.timestamp));
+	
+	var documentsInOrder = Object.values(documentMetadataById).slice(0);
+	documentsInOrder.sort(function(a,b) {
+	    return Date.parse(a.timestamp) - Date.parse(b.timestamp);
+	});
+
+	var allTips;
+	{
+		var antecedentIds = relations.map(function(r) { return r.antecedentId; });
+		allTips = Object.values(documentMetadataById).filter(function(d) { return !antecedentIds.includes(d.id); });
+	}
+
+	var isDocumentInLane = {}
+
+	var lanes = allTips.map(function(d) { return new MutableLane(d); });
+
+	for(var i = 0; i < lanes.length; i++) {
+		var lane = lanes[i];
+		var d = lane.documents[0];
+		do {
+			var antecedentIds = relations.filter(function(r){return r.descendantId == d.id;}).map(function(r){return r.antecedentId;});
+			var antecedents = antecedentIds.map(function(id){return documentMetadataById[id]; });
+			var next = antecedents.firstOrDefault(function(d){return !isDocumentInLane[d.id] && (d.authorId == lane.authorId);});
+			antecedents.forEach(function(antecedent) {
+				if(isDocumentInLane[antecedent.id]) {
+					//this is already represented
+				} else if(antecedent.authorId == lane.authorId) {
+					lane.addDocumentMetadata(antecedent);
+				} else {
+					lanes.push(new MutableLane(antecedent));
+				}
+				isDocumentInLane[antecedent.id] = true;
+			});
+			d = next;
+		} while(d != null);
+	}
+
+	var authorIds = Object.keys(authorMetadataById);
+
+	authorIds.sort(function(a,b){return a - b;});
+
+	lanes.sort(function(a,b){return a.authorId - b.authorId;});
+
+	var coordByDocumentId = {}
+
+	for(var laneIndex = 0; laneIndex < lanes.length; laneIndex++) {
+		var lane = lanes[laneIndex];
+		lane.documents.forEach(function(d) {
+            var index = documentsInOrder.indexOf(d);
+			coordByDocumentId[d.id] = {
+				x: 0.5 + index,
+				y: 0.5 + laneIndex
+			}
+		});
+	}
+
+    const rowHeightEm = 1.2;
+
+	var authorListings = $('#authorListings');
+
+	for(var i = 0; i < authorIds.length; i++) {
+		var authorId = authorIds[i];
+        var c = i % 2 == 0 ? "even" : "odd";
+		var authorDisplayName = authorMetadataById[authorId].displayName;
+		var laneCount = lanes.filter(function(l){return l.authorId == authorId;}).length;
+		authorListings.append($('<div>', {
+			class: c,
+			css: {
+				height: (laneCount * rowHeightEm) + 'em',
+				'line-height': rowHeightEm + 'em'
+			},
+			html: authorDisplayName
+		}));
+	}
+
+	var graph = document.getElementById('graph');
+	const svgNs = 'http://www.w3.org/2000/svg';
+	var xlinkNs = 'http://www.w3.org/1999/xlink';
+
+	graph.setAttribute('width', documentsInOrder.length * rowHeightEm + 'em');
+	graph.setAttribute('height', lanes.length * rowHeightEm + 'em');
+	graph.setAttribute('viewBox', '0 0 ' + documentsInOrder.length + ' ' + lanes.length);
+
+	{
+		var rowOffsetAccumulator = 0;
+		for(var i = 0; i < authorIds.length; i++) {
+			var a = authorIds[i];
+			var c = i % 2 == 0 ? 'even' : 'odd';
+			var h = lanes.filter(function(l){return l.authorId == a;}).length;
+			rowOffsetAccumulator += h;
+			var rect = document.createElementNS(svgNs, 'rect');
+			rect.setAttribute('width', documentsInOrder.length);
+			rect.setAttribute('y', rowOffsetAccumulator - h);
+			rect.setAttribute('height', h);
+			rect.setAttribute('class', c);
+			graph.appendChild(rect);
+		}
+	}
+
+	relations.forEach(function(r) {
+		var alfa = coordByDocumentId[r.antecedentId];
+		var bravo = coordByDocumentId[r.descendantId];
+		var path = document.createElementNS(svgNs, 'path');
+		var builder = '';
+		builder += 'M ';
+		builder += alfa.x;
+		builder += ' ';
+		builder += alfa.y;
+		builder += ' C ';
+		builder += alfa.x + 1;
+		builder += ' ';
+		builder += alfa.y;
+		builder += ', ';
+		builder += bravo.x - 1;
+		builder += ' ';
+		builder += bravo.y;
+		builder += ' ';
+		builder += bravo.x;
+		builder += ' ';
+		builder += bravo.y;
+		path.setAttribute('d', builder);
+		graph.appendChild(path);
+	});
+
+	for(var key in coordByDocumentId) {
+		var c = coordByDocumentId[key];
+		var link = document.createElementNS(svgNs,'a');
+		var url = '@archetypicalDocumentLink'.replace('@replacementCode',key);
+		link.setAttributeNS(xlinkNs, 'xlink:href', url);
+		var circle = document.createElementNS(svgNs, 'circle');
+		if(key == '@Model.Id') {
+			circle.setAttribute('class', 'here');
+		}
+		circle.setAttribute('cx', c.x);
+		circle.setAttribute('cy', c.y);
+		circle.setAttribute('r', 0.25);
+		link.appendChild(circle);
+		graph.appendChild(link);
+	}
+
+	{
+		var closedSet = {}
+		var openSet = {}
+
+		openSet['@Model.Id'] = true;
+
+		do {
+			var antecedentIds = relations.filter(function(r) { return openSet[r.descendantId]; }).map(function(r) { return r.antecedentId; });
+			for(var id in openSet) {
+				closedSet[id] = true;
+			}
+			antecedentIds.forEach(function(id) {
+				openSet[id] = true;
+			});
+			for(var id in closedSet) {
+				delete openSet[id];
+			}
+		} while(Object.keys(openSet).length > 0);
+
+		var contributors = {}
+		for(var id in closedSet) {
+			var documentMetadata = documentMetadataById[id];
+			contributors[documentMetadata.authorId] = true;
+		}
+
+		var contributorList = $('#contributorList');
+	
+		for(var id in contributors) {
+			var authorMetadata = authorMetadataById[id];
+			var row = $('<tr>');
+			var imageColumn = $('<td>');
+			var image = $('<img>', {
+				class: 'avatar',
+				src: 'https://www.gravatar.com/avatar/' + authorMetadata.gravatarHash
+			});
+			imageColumn.append(image);
+			row.append(imageColumn);
+			var displayNameColumn = $('<td>', {
+				html: authorMetadata.displayName
+			});
+			row.append(displayNameColumn);
+			var url = '@archetypicalAccountLink'.replace('@replacementCode',id);
+			var link = $('<a>', {
+				href: url,
+				html: "View"
+			});
+			var linkColumn = $('<td>');
+			linkColumn.append(link);
+			row.append(linkColumn);
+			contributorList.append(row);
+		}
+	}
+
+	mainPageLoad.pop();
+}
+const prerequisiteLoadManager = new LoadManager(prerequisiteLoadStart, prerequisiteLoadComplete);
+function authorLoadStart() {
+	prerequisiteLoadManager.push();
+}
+function authorLoadComplete() {
+	prerequisiteLoadManager.pop();
+}
+function documentLoadStart() {
+	prerequisiteLoadManager.push();
+}
+function documentLoadComplete() {
+	prerequisiteLoadManager.pop();
+}
+const documentLoadManager = new LoadManager(documentLoadStart, documentLoadComplete);
+const authorLoadManager = new LoadManager(authorLoadStart, authorLoadComplete);
+function authorLoaded(data) {
+	authorMetadataById[data.id] = data;
+	authorLoadManager.pop();
+}
+function documentLoaded(data) {
+	documentMetadataById[data.id] = data;
+	if(!(data.authorId in authorMetadataById)) {
+		authorLoadManager.push();
+		authorMetadataById[data.authorId] = {}
+		$.getJSON('/api/accounts/' + data.authorId + '/metadata', authorLoaded);
+	}
+	documentLoadManager.pop();
+}
+function familyLoaded(data) {
+	relations = data;
+	var documentKeys = {}
+	for(var i = 0; i < relations.length; i++) {
+		var r = relations[i];
+		documentKeys[r.antecedentId] = true;
+		documentKeys[r.descendantId] = true;
+	}
+	for(var key in documentKeys) {
+		documentLoadManager.push();
+		$.getJSON('/api/documents/' + key + '/metadata', documentLoaded);
+	}
+	prerequisiteLoadManager.pop();
+}
+prerequisiteLoadManager.push();
+$.getJSON('/api/documents/@Model.Id.ToString()/family', familyLoaded);
+</script>
 }

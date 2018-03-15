@@ -7,6 +7,7 @@
   <ItemGroup>
     <None Remove="Setup.sql" />
     <None Remove="New.md" />
+    <None Remove="wwwroot\robots.txt" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
@@ -26,12 +27,15 @@
     <Folder Include="ViewModels\" />
     <Folder Include="wwwroot\images\" />
     <Folder Include="Views\Document\" />
-    <Folder Include="Views\Account\DisplayTemplates\" />
     <Folder Include="Utilities\" />
-    <Folder Include="Views\Document\DisplayTemplates\" />
+    <Folder Include="Services\" />
+    <Folder Include="Middleware\" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Setup.sql" />
     <EmbeddedResource Include="New.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="Views\Document\DisplayTemplates\AccountListingViewModel.cshtml" />
   </ItemGroup>
 </Project>

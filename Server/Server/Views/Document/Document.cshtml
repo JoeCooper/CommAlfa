@@ -1,38 +1,39 @@
-﻿@model Server.ViewModels.DocumentViewModel
-@using HeyRed.MarkdownSharp;
-@using System.Text;
-@{
-	string encodedBody;
-	{
-		var bodyBuilder = new StringBuilder();
-		for(var i = 0; i < Model.Body.Length; i++) {
-			var c = Model.Body[i];
-			switch(c) {
-				case '<':
-				bodyBuilder.Append("&lt;");
-				break;
-				case '>':
-				bodyBuilder.Append("&gt;");
-				break;
-				case '&':
-				bodyBuilder.Append("&amp;");
-				break;
-				default:
-				bodyBuilder.Append(c);
-				break;
-			}
-		}
-		encodedBody = new Markdown().Transform(bodyBuilder.ToString());
-	}
+﻿@model Server.ViewModels.IdentifierViewModel
+<div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
+<div id='scaffolding' hidden>
+	<table class="title"><tr>
+	    <td><h1 id='title'></h1></td>
+	    <td><a asp-action="Edit">Edit</a></td>
+	    <td><a asp-action="GetHistory">History</a></td>
+	</tr>
+	    <tr><td colspan="3">
+	    Saved by <span id='authorDisplayName'></span> on <span id='timestamp'></span>
+	    </td></tr>
+	</table>
+	<hr />
+	<div id='documentBody' />
+</div>
+@section Scripts {
+<script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
+<script>
+function consumeDocumentBody(data) {
+	$('#documentBody').html(marked(escapeHtml(data)));
+    loadPop();
 }
-<table class="title"><tr>
-    <td><h1>@Html.DisplayFor(m => m.Title)</h1></td>
-    <td><a asp-action="Edit">Edit</a></td>
-    <td><a asp-action="GetHistory">History</a></td>
-</tr>
-    <tr><td colspan="3">
-    Saved by @Html.DisplayFor(m => m.Sources.First().AuthorDisplayName) on @Html.DisplayFor(m => m.Sources.First().Timestamp)
-    </td></tr>
-</table>
-<hr />
-@Html.Raw(encodedBody)
+function consumeAuthorMetadata(data) {
+	$('#authorDisplayName').html(escapeHtml(data.displayName));
+    loadPop();
+}
+function consumeDocumentMetadata(data) {
+	$('#title').html(marked(escapeHtml(data.title)));
+	$('#timestamp').html(escapeHtml(data.timestamp));
+    loadPush();
+	$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata);
+    loadPop();
+}
+loadPush();
+loadPush();
+$.get('/api/documents/@(Model.Id)', consumeDocumentBody);
+$.getJSON('/api/documents/@(Model.Id)/metadata', consumeDocumentMetadata);
+</script>
+}

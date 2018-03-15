@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - West Peak</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inscrybmde@1.11.3/dist/inscrybmde.min.css">
-        
     <environment include="Development">
         <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
         <link rel="stylesheet" href="~/css/site.css" />
+        <link rel="stylesheet" href="~/css/spinner.css" />
     </environment>
     <environment exclude="Development">
         <link rel="stylesheet" href="https://ajax.aspnetcdn.com/ajax/bootstrap/3.3.7/css/bootstrap.min.css"
               asp-fallback-href="~/lib/bootstrap/dist/css/bootstrap.min.css"
               asp-fallback-test-class="sr-only" asp-fallback-test-property="position" asp-fallback-test-value="absolute" />
         <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/spinner.min.css" asp-append-version="true" />
     </environment>
     @RenderSection("Head", required: false)
 </head>
@@ -34,21 +34,14 @@
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
                     <li><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
-                    @if (User.Identity.IsAuthenticated) {
-                        <li><a asp-area="" asp-controller="Document" asp-action="Edit" asp-route-id="new">New</a></li>
-                        <li><a asp-area="" asp-controller="Account" asp-action="Index">Account</a></li>
-                        <li><a asp-area="" asp-controller="Account" asp-action="Logout">Sign out</a></li>
-                    }
-                    else {
-                        <li><a asp-area="" asp-controller="Account" asp-action="Login">Sign in</a></li>
-                    }
+                    <li><a asp-area="" asp-controller="Document" asp-action="Edit" asp-route-id="new">New</a></li>
+                    <li><a asp-area="" asp-controller="Account" asp-action="Index">Account</a></li>
                 </ul>
             </div>
         </div>
     </nav>
     <div class="container body-content">
         @RenderBody()
-        <!--<footer></footer>-->
     </div>
         
     <environment include="Development">
