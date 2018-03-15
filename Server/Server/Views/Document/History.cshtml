@@ -1,4 +1,9 @@
 ﻿@model Server.ViewModels.IdentifierViewModel
+@{
+	var replacementCode = Guid.NewGuid().ToString();
+	var archetypicalDocumentLink = Url.Action("GetDocument","Document",new {id=replacementCode});
+	var archetypicalAccountLink = Url.Action("GetAccount","Account",new {id=replacementCode});
+}
 <div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
 <div id='scaffolding' hidden>
 	<table class="title">
@@ -126,6 +131,7 @@ function prerequisiteLoadComplete() {
 
 	var graph = document.getElementById('graph');
 	const svgNs = 'http://www.w3.org/2000/svg';
+	var xlinkNs = 'http://www.w3.org/1999/xlink';
 
 	graph.setAttribute('width', documentsInOrder.length * rowHeightEm + 'em');
 	graph.setAttribute('height', lanes.length * rowHeightEm + 'em');
@@ -174,6 +180,9 @@ function prerequisiteLoadComplete() {
 
 	for(var key in coordByDocumentId) {
 		var c = coordByDocumentId[key];
+		var link = document.createElementNS(svgNs,'a');
+		var url = '@archetypicalDocumentLink'.replace('@replacementCode',key);
+		link.setAttributeNS(xlinkNs, 'xlink:href', url);
 		var circle = document.createElementNS(svgNs, 'circle');
 		if(key == '@Model.Id') {
 			circle.setAttribute('class', 'here');
@@ -181,7 +190,8 @@ function prerequisiteLoadComplete() {
 		circle.setAttribute('cx', c.x);
 		circle.setAttribute('cy', c.y);
 		circle.setAttribute('r', 0.25);
-		graph.appendChild(circle);
+		link.appendChild(circle);
+		graph.appendChild(link);
 	}
 
 	{
@@ -201,7 +211,7 @@ function prerequisiteLoadComplete() {
 			for(var id in closedSet) {
 				delete openSet[id];
 			}
-		} while(openSet.length > 0);
+		} while(Object.keys(openSet).length > 0);
 
 		var contributors = {}
 		for(var id in closedSet) {
@@ -225,7 +235,13 @@ function prerequisiteLoadComplete() {
 				html: authorMetadata.displayName
 			});
 			row.append(displayNameColumn);
+			var url = '@archetypicalAccountLink'.replace('@replacementCode',id);
+			var link = $('<a>', {
+				href: url,
+				html: "View"
+			});
 			var linkColumn = $('<td>');
+			linkColumn.append(link);
 			row.append(linkColumn);
 			contributorList.append(row);
 		}
