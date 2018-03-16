@@ -10,7 +10,7 @@ namespace Server.Middleware
 {
 	public class ErrorHandlingMiddleware
 	{
-		private readonly RequestDelegate next;
+		readonly RequestDelegate next;
 
 		public ErrorHandlingMiddleware(RequestDelegate next)
 		{
@@ -29,7 +29,7 @@ namespace Server.Middleware
 			}
 		}
 
-		private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+		static Task HandleExceptionAsync(HttpContext context, Exception exception)
 		{
 			var code = HttpStatusCode.InternalServerError; // 500 if unexpected
 			if (exception is FileNotFoundException) code = HttpStatusCode.NotFound;

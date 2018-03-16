@@ -7,10 +7,6 @@ namespace Server.Utilities
 {
 	public class IdentifierConverter: JsonConverter
 	{
-		public IdentifierConverter()
-		{
-		}
-
 		public override bool CanConvert(Type objectType)
 		{
 			return objectType == typeof(Guid) || objectType == typeof(MD5Sum);
@@ -18,7 +14,16 @@ namespace Server.Utilities
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			throw new NotImplementedException();
+			var encoded = reader.ReadAsString();
+			if(objectType == typeof(Guid))
+			{
+				return new Guid(WebEncoders.Base64UrlDecode(encoded));
+			}
+			if(objectType == typeof(MD5Sum))
+			{
+				return new MD5Sum(WebEncoders.Base64UrlDecode(encoded));
+			}
+			throw new ArgumentOutOfRangeException();
 		}
 
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)

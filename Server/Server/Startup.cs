@@ -66,30 +66,30 @@ namespace Server
 			services.AddMvc(options =>
 			{
 				options.CacheProfiles.Add(CacheProfileNames.Default,
-					new CacheProfile()
+					new CacheProfile
 					{
 						Duration = 60
 					});
 				options.CacheProfiles.Add(CacheProfileNames.Never,
-					new CacheProfile()
+					new CacheProfile
 					{
 						Location = ResponseCacheLocation.None,
 						NoStore = true
 					});
 				options.CacheProfiles.Add(CacheProfileNames.SemiImmutable,
-					new CacheProfile()
+					new CacheProfile
 					{
 						Location = ResponseCacheLocation.Any,
 						Duration = 3600
 					});
 				options.CacheProfiles.Add(CacheProfileNames.Immutable,
-					new CacheProfile()
+					new CacheProfile
 					{
 						Location = ResponseCacheLocation.Any,
 						Duration = 31536000
 					});
                 options.CacheProfiles.Add(CacheProfileNames.Sitemap,
-                    new CacheProfile()
+                    new CacheProfile
                     {
                         Location = ResponseCacheLocation.Any,
                         Duration = 86400
@@ -129,9 +129,7 @@ namespace Server
 
 			app.UseMvc(routes =>
 			{
-				routes.MapRoute(
-					name: "default",
-					template: "{controller=Home}/{action=Index}/{id?}");
+				routes.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
 			});
 
 			var connectionString = Environment.GetEnvironmentVariable("POSTGRES_URL");

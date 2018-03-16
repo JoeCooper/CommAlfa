@@ -140,12 +140,7 @@ namespace Server.Controllers
             Array.Copy(extantDigest, extantSalt, extantSalt.Length);
             Array.Copy(extantDigest, extantSalt.Length, extantHash, 0, extantHash.Length);
 
-            var hash = KeyDerivation.Pbkdf2(
-                password: password,
-                salt: extantSalt,
-                prf: KeyDerivationPrf.HMACSHA1,
-                iterationCount: 10000,
-                numBytesRequested: 256 / 8);
+            var hash = KeyDerivation.Pbkdf2(password, extantSalt, KeyDerivationPrf.HMACSHA1, 10000, 256 / 8);
 
             var match = true;
 
@@ -158,7 +153,7 @@ namespace Server.Controllers
             return match;
         }
 
-        static byte[] GetPasswordDigest(string password) {
+        protected static byte[] GetPasswordDigest(string password) {
             // generate a 128-bit salt using a secure PRNG
             var salt = new byte[128 / 8];
             using (var rng = RandomNumberGenerator.Create())
@@ -167,12 +162,7 @@ namespace Server.Controllers
             }
 
             // derive a 256-bit subkey (use HMACSHA1 with 10,000 iterations)
-            var hashed = KeyDerivation.Pbkdf2(
-                password: password,
-                salt: salt,
-                prf: KeyDerivationPrf.HMACSHA1,
-                iterationCount: 10000,
-                numBytesRequested: 256 / 8);
+            var hashed = KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, 10000, 256 / 8);
 
             var digest = new byte[384 / 8];
 
@@ -259,7 +249,7 @@ namespace Server.Controllers
                 }
                 return View(viewModel);
             }
-			return RedirectToAction(nameof(Login), new { returnUrl = returnUrl });
+			return RedirectToAction(nameof(Login), new { returnUrl });
         }
 
         static bool VetEmail(string email)

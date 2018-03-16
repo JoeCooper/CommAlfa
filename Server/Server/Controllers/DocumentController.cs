@@ -52,6 +52,10 @@ namespace Server.Controllers
 		{
             submissionModel.AntecedentIdBase64 = submissionModel.AntecedentIdBase64 ?? Enumerable.Empty<string>();
             
+			if(submissionModel.AntecedentIdBase64.Any() && !submissionModel.AntecedentIdBase64.Contains(id)) {
+				return BadRequest();
+			}
+
             if (submissionModel.AntecedentIdBase64.Count() > 2)
             {
                 return BadRequest();

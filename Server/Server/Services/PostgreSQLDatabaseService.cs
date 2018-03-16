@@ -164,7 +164,7 @@ namespace Server.Services
 						{
 							return new Account(id, reader.GetString(0), reader.GetString(1));
 						}
-						throw new NotImplementedException();
+						throw new FileNotFoundException();
 					}
 				}
 			}
