@@ -1,4 +1,5 @@
 ﻿@model Server.ViewModels.IdentifierViewModel
+@using Server.Utilities
 <div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
 <div id='scaffolding' hidden>
 	<table class="title"><tr>
@@ -33,7 +34,7 @@ function prerequisiteLoadComplete() {
 	mainPageLoad.pop();
 }
 const prerequisiteLoadManager = new LoadManager(prerequisiteLoadStart, prerequisiteLoadComplete);
-const gravatarRoot = 'https://www.gravatar.com/avatar/';
+const gravatarRoot = '@Gravatar.Root';
 function consumeAuthorMetadata(data) {
 	$('#authorDisplayName').html(escapeHtml(data.displayName));
 	$('#authorAvatar').attr('src', gravatarRoot + data.gravatarHash);

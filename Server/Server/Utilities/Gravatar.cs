@@ -6,6 +6,8 @@ namespace Server.Utilities
 {
 	public static class Gravatar
 	{
+		public const string Root = "https://www.gravatar.com/avatar/";
+
 		public static string ToGravatarHash(this string email) {
             string gravatarHash;
 			using (var md5Encoder = MD5.Create())
