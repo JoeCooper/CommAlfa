@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -184,7 +185,35 @@ namespace Server.Services
 					}
 				}
 			}
-		}
+        }
+
+        public async Task<Reader<DocumentMetadata>> GetDocumentMetadataAsync()
+        {
+            NpgsqlCommand command = null;
+            try
+            {
+                command = new NpgsqlCommand();
+                command.Connection = new NpgsqlConnection(connectionString);
+                await command.Connection.OpenAsync();
+                command.CommandText = "SELECT id,title,authorId,timestamp FROM document;";
+                var reader = await command.ExecuteReaderAsync();
+                return new Reader<DocumentMetadata>(
+                    new MetaDisposable(command, command.Connection),
+                    async () => await reader.ReadAsync(),
+                    () => new DocumentMetadata(
+                        new MD5Sum(reader.GetGuid(0).ToByteArray()),
+                        reader.GetString(1),
+                        reader.GetGuid(2),
+                        reader.GetDateTime(3))
+                );
+            }
+            catch(Exception ex)
+            {
+                command?.Connection?.Dispose();
+                command?.Dispose();
+                throw ex;
+            }
+        }
 
 		public async Task<string> GetDocumentBodyAsync(MD5Sum id, bool ignoreBlock = false)
 		{

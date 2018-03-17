@@ -128,5 +128,17 @@ namespace Server.UnitTests.Services
 			}
 			return builder;
 		}
+
+        public async Task<Reader<DocumentMetadata>> GetDocumentMetadataAsync()
+        {
+            await Task.Yield();
+            var enumerator = documentMetadata.GetEnumerator();
+            return new Reader<DocumentMetadata>(null, async () =>
+            {
+                await Task.Yield();
+                return enumerator.MoveNext();
+            }, () => enumerator.Current);
+            throw new NotImplementedException();
+        }
 	}
 }
