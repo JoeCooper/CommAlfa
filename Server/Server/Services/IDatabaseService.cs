@@ -13,7 +13,6 @@ namespace Server.Services
 		Task<IEnumerable<MD5Sum>> GetDescendantIds(MD5Sum documentId);
 		Task<DocumentMetadata> GetDocumentMetadataAsync(MD5Sum id);
 		Task<string> GetDocumentBodyAsync(MD5Sum id, bool ignoreBlock = false);
-		Task<DocumentBlock> GetDocumentBlockAsync(MD5Sum id);
 		Task<IEnumerable<Relation>> GetFamilyAsync(MD5Sum familyMemberId);
 	}
 }

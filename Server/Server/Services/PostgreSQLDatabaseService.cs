@@ -22,17 +22,9 @@ namespace Server.Services
 
 		public async Task<MD5Sum> AddDocumentAsync(Guid authorId, string body, string title, IEnumerable<MD5Sum> antecedantIds)
 		{
-			byte[] submissionId;
+			var submissionId = MD5Sum.Encode(title + body);
 
-			using (var md5Encoder = MD5.Create())
-			{
-				md5Encoder.Initialize();
-				var whole = title + body;
-				var buffer = Encoding.UTF8.GetBytes(whole);
-				submissionId = md5Encoder.ComputeHash(buffer);
-			}
-
-            var submissionIdAsGuid = new Guid(submissionId);
+			var submissionIdAsGuid = submissionId.ToGuid();
 
             try
 			{
@@ -88,7 +80,7 @@ namespace Server.Services
 					throw ex;
 				}
 			}
-			return new MD5Sum(submissionId);
+			return submissionId;
 		}
 
 		public async Task<IEnumerable<MD5Sum>> GetDescendantIds(MD5Sum documentId)
@@ -230,36 +222,6 @@ namespace Server.Services
 							return reader.GetString(0);
 						}
 						throw new FileNotFoundException();
-					}
-				}
-			}
-		}
-
-		public async Task<DocumentBlock> GetDocumentBlockAsync(MD5Sum id)
-		{
-			using (var connection = new NpgsqlConnection(connectionString))
-			{
-				await connection.OpenAsync();
-
-				using (var cmd = new NpgsqlCommand())
-				{
-					cmd.Connection = connection;
-					cmd.CommandText = "SELECT isVoluntary,agentId,comment,timestamp FROM documentBlock WHERE id=@id;";
-					cmd.Parameters.AddWithValue("@id", id.ToGuid());
-
-					using (var reader = await cmd.ExecuteReaderAsync())
-					{
-						if (await reader.ReadAsync())
-						{
-							return new DocumentBlock(
-								id,
-								reader.GetBoolean(0),
-								reader.GetGuid(1),
-								reader.GetString(2),
-								reader.GetDateTime(3)
-							);
-						}
-						return null;
 					}
 				}
 			}
