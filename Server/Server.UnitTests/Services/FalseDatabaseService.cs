@@ -35,19 +35,29 @@ namespace Server.UnitTests.Services
 		{
 		}
 
-		public FalseDatabaseService(
-			List<Account> account,
-			List<Relation> relation,
-			List<DocumentMetadata> documentMetadata,
-			List<DocumentBlock> documentBlock,
-			List<DocumentBodyRow> documentBody)
-		{
-			this.account = account;
-			this.relation = relation;
-			this.documentMetadata = documentMetadata;
-			this.documentBlock = documentBlock;
-			this.documentBody = documentBody;
-		}
+        public FalseDatabaseService(
+            List<Account> account,
+            List<Relation> relation,
+            List<DocumentMetadata> documentMetadata,
+            List<DocumentBlock> documentBlock,
+            List<DocumentBodyRow> documentBody)
+        {
+            this.account = account;
+            this.relation = relation;
+            this.documentMetadata = documentMetadata;
+            this.documentBlock = documentBlock;
+            this.documentBody = documentBody;
+        }
+
+        public IEnumerable<Account> Account { get => account; }
+
+        public IEnumerable<Relation> Relation { get => relation; }
+
+        public IEnumerable<DocumentMetadata> DocumentMetadata { get => documentMetadata; }
+
+        public IEnumerable<DocumentBlock> DocumentBlock { get => documentBlock; }
+
+        public IEnumerable<DocumentBodyRow> DocumentBody { get => documentBody; }
 
 		public async Task<MD5Sum> AddDocumentAsync(Guid authorId, string body, string title, IEnumerable<MD5Sum> antecedents)
 		{
