@@ -138,12 +138,15 @@ namespace Server.UnitTests.Services
                 await Task.Yield();
                 return enumerator.MoveNext();
             }, () => enumerator.Current);
-            throw new NotImplementedException();
         }
 
-        public Task<Account> GetAccountAsync(string email)
+        public async Task<Account> GetAccountAsync(string email)
         {
-            throw new NotImplementedException();
+            await Task.Yield();
+            var result = account.SingleOrDefault(a => a.Email.Equals(email));
+            if (result == null)
+                throw new FileNotFoundException();
+            return result;
         }
 
         public async Task SaveAccountAsync(Account account, bool onlyNew)
