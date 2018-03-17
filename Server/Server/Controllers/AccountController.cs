@@ -252,17 +252,17 @@ namespace Server.Controllers
 			return RedirectToAction(nameof(Login), new { returnUrl });
         }
 
-        static bool VetEmail(string email)
+        public static bool VetEmail(string email)
         {
 			return !string.IsNullOrWhiteSpace(email) && EmailValidation.EmailValidator.Validate(email) && email.Length < PropertyLengthLimit;
         }
 
-        static bool VetDisplayName(string displayName)
+		public static bool VetDisplayName(string displayName)
         {
 			return !string.IsNullOrWhiteSpace(displayName) && displayName.Length < PropertyLengthLimit;
         }
 
-        static bool VetPassword(string password)
+		public static bool VetPassword(string password)
         {
 			return !string.IsNullOrWhiteSpace(password) && password.Length >= 6 && password.Length < PropertyLengthLimit;
         }
