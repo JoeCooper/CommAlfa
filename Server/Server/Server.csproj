@@ -38,4 +38,7 @@
   <ItemGroup>
     <Content Remove="Views\Document\DisplayTemplates\AccountListingViewModel.cshtml" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Controllers\CrawlerController.cs" />
+  </ItemGroup>
 </Project>

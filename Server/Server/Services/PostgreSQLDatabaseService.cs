@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Npgsql;
 using Server.Models;
+using Server.Utilities;
 
 namespace Server.Services
 {
@@ -162,6 +163,65 @@ namespace Server.Services
 				}
 			}
 		}
+
+        public async Task<Account> GetAccountAsync(string email)
+        {
+            using (var conn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand())
+            {
+                await conn.OpenAsync();
+                cmd.Connection = conn;
+                cmd.CommandText = "SELECT id,displayName,password_digest FROM account WHERE email=@email;";
+                cmd.Parameters.AddWithValue("@email", email ?? string.Empty);
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        var guid = reader.GetGuid(0);
+                        var displayName = reader.GetString(1);
+                        var extantDigest = new byte[Password.DigestLength];
+                        reader.GetBytes(2, 0, extantDigest, 0, extantDigest.Length);
+                        return new Account(guid, displayName, string.Empty, extantDigest);
+                    }
+                    throw new FileNotFoundException();
+                }
+            }
+        }
+
+        public async Task SaveAccountAsync(Account account, bool onlyNew)
+        {
+            using (var conn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand())
+            {
+                await conn.OpenAsync();
+                cmd.Connection = conn;
+                cmd.CommandText = "INSERT INTO account(id,displayName,email,password_digest) values(@guid,@displayName,@email,@password_digest)";
+                if(!onlyNew)
+                {
+                    cmd.CommandText += " ON CONFLICT (id) DO UPDATE SET " +
+                        "displayName = EXCLUDED.displayName," +
+                        "email = EXCLUDED.email," +
+                        "password_digest = EXCLUDED.password_digest";
+                }
+                cmd.CommandText += ";";
+                cmd.Parameters.AddWithValue("@guid", account.Id);
+                cmd.Parameters.AddWithValue("@displayName", account.DisplayName);
+                cmd.Parameters.AddWithValue("@email", account.Email);
+                cmd.Parameters.AddWithValue("@password_digest", account.PasswordDigest);
+                try
+                {
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (PostgresException ex)
+                {
+                    if (ex.SqlState == "23505")
+                    {
+                        throw new DuplicateKeyException();
+                    }
+                    throw ex;
+                }
+            }
+        }
 
 		public async Task<DocumentMetadata> GetDocumentMetadataAsync(MD5Sum id)
 		{

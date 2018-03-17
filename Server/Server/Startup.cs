@@ -35,11 +35,6 @@ namespace Server
 			services.AddResponseCaching();
 			services.AddOptions();
 
-			services.Configure<DatabaseConfiguration>(options =>
-			{
-				options.ConnectionString = Environment.GetEnvironmentVariable("POSTGRES_URL");
-			});
-
 			services.AddSingleton<IDatabaseService>(new PostgreSQLDatabaseService(Environment.GetEnvironmentVariable("POSTGRES_URL")));
 
 			services.Configure<InputConfiguration>(options =>

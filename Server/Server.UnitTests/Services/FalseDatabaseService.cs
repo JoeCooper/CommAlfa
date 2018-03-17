@@ -140,5 +140,29 @@ namespace Server.UnitTests.Services
             }, () => enumerator.Current);
             throw new NotImplementedException();
         }
+
+        public Task<Account> GetAccountAsync(string email)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task SaveAccountAsync(Account account, bool onlyNew)
+        {
+            await Task.Yield();
+            if (onlyNew && this.account.Any(a => a.Id.Equals(account.Id)))
+            {
+                throw new DuplicateKeyException();
+            }
+            var extant = this.account.SingleOrDefault(a => a.Id.Equals(account.Id));
+            var indexOfExtant = this.account.IndexOf(extant);
+            if(indexOfExtant >= 0)
+            {
+                this.account[indexOfExtant] = account;
+            }
+            else
+            {
+                this.account.Add(account);
+            }
+        }
 	}
 }
