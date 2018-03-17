@@ -126,24 +126,6 @@ namespace Server
 			{
 				routes.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
 			});
-
-			var connectionString = Environment.GetEnvironmentVariable("POSTGRES_URL");
-			using (var conn = new NpgsqlConnection(connectionString))
-			{
-				conn.Open();
-				var assembly = Assembly.GetExecutingAssembly();
-				var resourceName = "Server.Setup.sql";
-				string setupSql;
-				using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-				using (StreamReader reader = new StreamReader(stream))
-				{
-					setupSql = reader.ReadToEnd();
-				}
-				using (var cmd = new NpgsqlCommand(setupSql, conn))
-				{
-					cmd.ExecuteNonQuery();
-				}
-			}
 		}
 	}
 }

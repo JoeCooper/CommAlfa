@@ -5,9 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Setup.sql" />
     <None Remove="New.md" />
     <None Remove="wwwroot\robots.txt" />
+    <None Remove="Services\Setup.sql" />
+    <None Remove="Services\Npgsql\PostgreSQLSetup.sql" />
+    <None Remove="Services\PostgreSQLSetup.sql" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
@@ -32,8 +34,8 @@
     <Folder Include="Middleware\" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Setup.sql" />
     <EmbeddedResource Include="New.md" />
+    <EmbeddedResource Include="Services\PostgreSQLSetup.sql" />
   </ItemGroup>
   <ItemGroup>
     <Content Remove="Views\Document\DisplayTemplates\AccountListingViewModel.cshtml" />

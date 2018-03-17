@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Data.Common;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 using Npgsql;
 using Server.Models;
@@ -19,7 +17,23 @@ namespace Server.Services
 		
 		public PostgreSQLDatabaseService(string connectionString)
 		{
-			this.connectionString = connectionString;
+            this.connectionString = connectionString;
+            using (var conn = new NpgsqlConnection(connectionString))
+            {
+                conn.Open();
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceName = "Server.Services.PostgreSQLSetup.sql";
+                string setupSql;
+                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    setupSql = reader.ReadToEnd();
+                }
+                using (var cmd = new NpgsqlCommand(setupSql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
 		}
 
 		public async Task<MD5Sum> AddDocumentAsync(Guid authorId, string body, string title, IEnumerable<MD5Sum> antecedantIds)
