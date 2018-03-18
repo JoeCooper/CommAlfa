@@ -61,7 +61,7 @@ namespace Server.UnitTests.Services
 
 		public async Task<MD5Sum> AddDocumentAsync(Guid authorId, string body, string title, IEnumerable<MD5Sum> antecedents)
 		{
-			if (account.Any(a => a.Id.Equals(authorId)))
+			if (!account.Any(a => a.Id.Equals(authorId)))
 			{
 				throw new Exception();
 			}
