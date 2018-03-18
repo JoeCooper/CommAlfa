@@ -9,6 +9,7 @@ using Server.Utilities;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Server.UnitTests
 {
@@ -27,6 +28,25 @@ namespace Server.UnitTests
             Assert.Equal(draftAccount.DisplayName, resultBody.DisplayName);
             Assert.Equal(draftAccount.Email.ToGravatarHash(), resultBody.GravatarHash);
             Assert.Equal(draftAccount.Id, resultBody.Id);
+        }
+
+        [Fact(DisplayName = "Fetch non-existent account")]
+        public async Task TestFetchNonExistentAccount()
+        {
+            var falseDatabaseService = new FalseDatabaseService();
+            var draftAccount = new Account(Guid.NewGuid(), "Alfa", "alfa@bravo.com", Array.Empty<byte>());
+            await falseDatabaseService.SaveAccountAsync(draftAccount, true);
+            var accountApiController = new AccountApiController(falseDatabaseService);
+            var idWhichIsNotRepresentedInTheDatabase = WebEncoders.Base64UrlEncode(Guid.NewGuid().ToByteArray());
+            try
+            {
+                var result = await accountApiController.GetAccountMetadata(idWhichIsNotRepresentedInTheDatabase);
+                Assert.True(false);
+            }
+            catch (Exception ex)
+            {
+                Assert.True(ex is FileNotFoundException);
+            }
         }
 
         [Theory(DisplayName = "Fetch account with bad ID")]
@@ -60,6 +80,19 @@ namespace Server.UnitTests
             var resultBody = (IEnumerable<MD5Sum>)result.Value;
             Assert.Equal(resultBody.Count(), draftDocumentKeys.Count());
             Assert.True(resultBody.SequenceEqual(draftDocumentKeys));
+        }
+
+        [Fact(DisplayName = "Fetch documents for non-existent account")]
+        public async Task TestFetchDocumentsForNonExistentAccount()
+        {
+            var falseDatabaseService = new FalseDatabaseService();
+            var draftAccount = new Account(Guid.NewGuid(), "Alfa", "alfa@bravo.com", Array.Empty<byte>());
+            await falseDatabaseService.SaveAccountAsync(draftAccount, true);
+            var accountApiController = new AccountApiController(falseDatabaseService);
+            var idWhichIsNotRepresentedInTheDatabase = WebEncoders.Base64UrlEncode(Guid.NewGuid().ToByteArray());
+            var result = (OkObjectResult) await accountApiController.GetAccountDocuments(idWhichIsNotRepresentedInTheDatabase);
+            var resultBody = (IEnumerable<MD5Sum>) result.Value;
+            Assert.Empty(resultBody);
         }
 
         [Theory(DisplayName = "Fetch documents for account with bad id")]
