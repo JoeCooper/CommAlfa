@@ -1,10 +1,20 @@
-﻿using Server.Utilities;
+﻿using System;
+using Microsoft.AspNetCore.WebUtilities;
+using Server.Utilities;
 using Xunit;
 
 namespace Server.UnitTests
 {
 	public class IdValidatorTest
-	{
+    {
+        [Theory(DisplayName = "Identifier falsifier matches base 64 URL encoder")]
+        [ClassData(typeof(Guids))]
+        public void TestMatchesBase64UrlEncode(Guid guid)
+        {
+            var encodedBody = WebEncoders.Base64UrlEncode(guid.ToByteArray());
+            Assert.False(encodedBody.FalsifyAsIdentifier());
+        }
+
 		[Theory(DisplayName = "Validator permits good IDs")]
 		[InlineData("49s7dJFiQ0y7B7g46HE6mg")]
 		[InlineData("I--lhwnHhkmzKLw7ooyjQw")]
