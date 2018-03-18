@@ -29,6 +29,15 @@ namespace Server.UnitTests
             Assert.Equal(draftAccount.Id, resultBody.Id);
         }
 
+        [Theory]
+        [ClassData(typeof(BadIds))]
+        public async Task TestFetchAccountFastFail(string id)
+        {
+            var accountApiController = new AccountApiController(new FalseDatabaseService());
+            var result = await accountApiController.GetAccountMetadata(id);
+            Assert.True(result is BadRequestResult);
+        }
+
         [Fact(DisplayName = "Fetch documents for account via API")]
         public async Task TestFetchDocuments()
         {
@@ -51,6 +60,15 @@ namespace Server.UnitTests
             var resultBody = (IEnumerable<MD5Sum>)result.Value;
             Assert.Equal(resultBody.Count(), draftDocumentKeys.Count());
             Assert.True(resultBody.SequenceEqual(draftDocumentKeys));
+        }
+
+        [Theory]
+        [ClassData(typeof(BadIds))]
+        public async Task TestFetchDocumentsFastFail(string id)
+        {
+            var accountApiController = new AccountApiController(new FalseDatabaseService());
+            var result = await accountApiController.GetAccountMetadata(id);
+            Assert.True(result is BadRequestResult);
         }
     }
 }

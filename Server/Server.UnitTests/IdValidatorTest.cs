@@ -42,15 +42,8 @@ namespace Server.UnitTests
 			Assert.False(givenString.FalsifyAsIdentifier());
 		}
 
-		[Theory(DisplayName = "Validator rejects bad IDs")]
-		[InlineData("95ltdf14UkujTfP%YPHyJA")]
-		[InlineData("hXhrkgm7skKp#UphlqsvHQ")]
-		[InlineData("v∂d5Yą-wIkuO8vRBDT8uEw")]
-		[InlineData("9LzmeL$nk2Ajl68xNnw")]
-		[InlineData("zIhX_XEl4kOxqnk2AFdJf_RNHJQ")]
-		[InlineData("9kJYqnk2AqEeOH6l^AqEe79x3bHA")]
-		[InlineData("BsaggLhEl4kOxqEl4kOxq5UBS0R8jw")]
-		[InlineData("-UlRZnF$tECzd3yBSvZ6zg")]
+        [Theory(DisplayName = "Validator rejects bad IDs")]
+        [ClassData(typeof(BadIds))]
 		public void TestBad(string givenString)
 		{
 			Assert.True(givenString.FalsifyAsIdentifier());
