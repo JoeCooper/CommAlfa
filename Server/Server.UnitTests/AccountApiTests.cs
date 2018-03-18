@@ -14,7 +14,7 @@ namespace Server.UnitTests
 {
     public class ApiTests
     {
-        [Fact(DisplayName = "Fetch account via API")]
+        [Fact(DisplayName = "Fetch account")]
         public async Task TestFetchAccount()
         {
             var falseDatabaseService = new FalseDatabaseService();
@@ -29,7 +29,7 @@ namespace Server.UnitTests
             Assert.Equal(draftAccount.Id, resultBody.Id);
         }
 
-        [Theory]
+        [Theory(DisplayName = "Fetch account with bad ID")]
         [ClassData(typeof(BadIds))]
         public async Task TestFetchAccountFastFail(string id)
         {
@@ -38,7 +38,7 @@ namespace Server.UnitTests
             Assert.True(result is BadRequestResult);
         }
 
-        [Fact(DisplayName = "Fetch documents for account via API")]
+        [Fact(DisplayName = "Fetch documents for account")]
         public async Task TestFetchDocuments()
         {
             var falseDatabaseService = new FalseDatabaseService();
@@ -62,7 +62,7 @@ namespace Server.UnitTests
             Assert.True(resultBody.SequenceEqual(draftDocumentKeys));
         }
 
-        [Theory]
+        [Theory(DisplayName = "Fetch documents for account with bad id")]
         [ClassData(typeof(BadIds))]
         public async Task TestFetchDocumentsFastFail(string id)
         {
