@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Server.Models;
@@ -19,11 +20,13 @@ namespace Server.Controllers
 	{
 		readonly IDatabaseService databaseService;
 		readonly InputConfiguration inputConfiguration;
+		readonly ILogger<DocumentApiController> logger;
 
-		public DocumentApiController(IDatabaseService databaseService, IOptions<InputConfiguration> _inputConfiguration)
+		public DocumentApiController(IDatabaseService databaseService, IOptions<InputConfiguration> _inputConfiguration, ILogger<DocumentApiController> logger)
 		{
 			this.databaseService = databaseService;
 			inputConfiguration = _inputConfiguration.Value;
+			this.logger = logger;
 		}
 
 		[HttpGet("{id}/family")]
@@ -31,7 +34,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetFamily(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var docId = new MD5Sum(idInBinary);
 			var relations = await databaseService.GetFamilyAsync(docId);
@@ -43,7 +49,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetDescendants(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var docId = new MD5Sum(idInBinary);
 			var descendants = await databaseService.GetDescendantIds(docId);
@@ -55,7 +64,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetDocumentMetadata(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var idBoxed = new MD5Sum(idInBinary);
 			var metadata = await databaseService.GetDocumentMetadataAsync(idBoxed);
@@ -67,7 +79,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetDocument(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var docId = new MD5Sum(idInBinary);
 			return Content(await databaseService.GetDocumentBodyAsync(docId), "text/markdown");
