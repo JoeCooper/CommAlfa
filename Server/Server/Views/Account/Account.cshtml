@@ -1,5 +1,9 @@
 ﻿@model Server.ViewModels.IdentifierViewModel
 @using Server.Utilities
+@{
+	var replacementCode = Guid.NewGuid().ToString();
+	var archetypicalDocumentLink = Url.Action("GetDocument","Document",new {id=replacementCode});
+}
 <div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
 <div id='scaffolding' hidden>
 	<table class="title"><tr>
@@ -46,7 +50,9 @@ function consumeDocumentMetadata(data) {
 	var titleColumn = $('<td>', { html: marked(escapeHtml(data.title)) });
 	var timestampColumn = $('<td>', { html: data.timestamp });
 	var linkColumn = $('<td>');
-	var link = $('<a>', { html: 'View', href: 'derp' })
+	var url = '@archetypicalDocumentLink'.replace('@replacementCode',data.id);
+	var link = $('<a>', { html: 'View', href: url })
+	linkColumn.append(link);
 	row.append(titleColumn);
 	row.append(timestampColumn);
 	row.append(linkColumn);
