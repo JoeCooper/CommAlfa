@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json;
 using Server.Utilities;
@@ -10,7 +12,7 @@ namespace Server.Models
     public class MD5Sum
     {
         readonly byte[] body;
-        readonly int hashCode;
+		readonly int hashCode;
 
         public MD5Sum(byte[] body)
         {
@@ -18,6 +20,17 @@ namespace Server.Models
             this.body = body;
             this.hashCode = ComputeHash(body);
         }
+
+		public static MD5Sum Encode(string s) {
+			byte[] body;
+			using (var md5Encoder = MD5.Create())
+			{
+				md5Encoder.Initialize();
+				var buffer = Encoding.UTF8.GetBytes(s);
+				body = md5Encoder.ComputeHash(buffer);
+			}
+			return new MD5Sum(body);
+		}
 
         public Guid ToGuid() {
             return new Guid(body);

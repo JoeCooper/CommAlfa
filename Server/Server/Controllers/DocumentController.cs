@@ -36,13 +36,11 @@ namespace Server.Controllers
         }
 
 		readonly IDatabaseService databaseService;
-        readonly DatabaseConfiguration databaseConfiguration;
 		readonly InputConfiguration inputConfiguration;
 
-		public DocumentController(IDatabaseService databaseService, IOptions<DatabaseConfiguration> _databaseConfiguration, IOptions<InputConfiguration> _inputConfiguration)
+		public DocumentController(IDatabaseService databaseService, IOptions<InputConfiguration> _inputConfiguration)
 		{
 			this.databaseService = databaseService;
-            databaseConfiguration = _databaseConfiguration.Value;
 			inputConfiguration = _inputConfiguration.Value;
         }
 

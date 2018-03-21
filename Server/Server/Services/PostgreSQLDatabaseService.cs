@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 using Npgsql;
 using Server.Models;
+using Server.Utilities;
 
 namespace Server.Services
 {
@@ -17,22 +17,30 @@ namespace Server.Services
 		
 		public PostgreSQLDatabaseService(string connectionString)
 		{
-			this.connectionString = connectionString;
+            this.connectionString = connectionString;
+            using (var conn = new NpgsqlConnection(connectionString))
+            {
+                conn.Open();
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceName = "Server.Services.PostgreSQLSetup.sql";
+                string setupSql;
+                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    setupSql = reader.ReadToEnd();
+                }
+                using (var cmd = new NpgsqlCommand(setupSql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
 		}
 
 		public async Task<MD5Sum> AddDocumentAsync(Guid authorId, string body, string title, IEnumerable<MD5Sum> antecedantIds)
 		{
-			byte[] submissionId;
+			var submissionId = MD5Sum.Encode(title + body);
 
-			using (var md5Encoder = MD5.Create())
-			{
-				md5Encoder.Initialize();
-				var whole = title + body;
-				var buffer = Encoding.UTF8.GetBytes(whole);
-				submissionId = md5Encoder.ComputeHash(buffer);
-			}
-
-            var submissionIdAsGuid = new Guid(submissionId);
+			var submissionIdAsGuid = submissionId.ToGuid();
 
             try
 			{
@@ -88,7 +96,7 @@ namespace Server.Services
 					throw ex;
 				}
 			}
-			return new MD5Sum(submissionId);
+			return submissionId;
 		}
 
 		public async Task<IEnumerable<MD5Sum>> GetDescendantIds(MD5Sum documentId)
@@ -170,6 +178,65 @@ namespace Server.Services
 			}
 		}
 
+        public async Task<Account> GetAccountAsync(string email)
+        {
+            using (var conn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand())
+            {
+                await conn.OpenAsync();
+                cmd.Connection = conn;
+                cmd.CommandText = "SELECT id,displayName,password_digest FROM account WHERE email=@email;";
+                cmd.Parameters.AddWithValue("@email", email ?? string.Empty);
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        var guid = reader.GetGuid(0);
+                        var displayName = reader.GetString(1);
+                        var extantDigest = new byte[Password.DigestLength];
+                        reader.GetBytes(2, 0, extantDigest, 0, extantDigest.Length);
+                        return new Account(guid, displayName, string.Empty, extantDigest);
+                    }
+                    throw new FileNotFoundException();
+                }
+            }
+        }
+
+        public async Task SaveAccountAsync(Account account, bool onlyNew)
+        {
+            using (var conn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand())
+            {
+                await conn.OpenAsync();
+                cmd.Connection = conn;
+                cmd.CommandText = "INSERT INTO account(id,displayName,email,password_digest) values(@guid,@displayName,@email,@password_digest)";
+                if(!onlyNew)
+                {
+                    cmd.CommandText += " ON CONFLICT (id) DO UPDATE SET " +
+                        "displayName = EXCLUDED.displayName," +
+                        "email = EXCLUDED.email," +
+                        "password_digest = EXCLUDED.password_digest";
+                }
+                cmd.CommandText += ";";
+                cmd.Parameters.AddWithValue("@guid", account.Id);
+                cmd.Parameters.AddWithValue("@displayName", account.DisplayName);
+                cmd.Parameters.AddWithValue("@email", account.Email);
+                cmd.Parameters.AddWithValue("@password_digest", account.PasswordDigest);
+                try
+                {
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (PostgresException ex)
+                {
+                    if (ex.SqlState == "23505")
+                    {
+                        throw new DuplicateKeyException();
+                    }
+                    throw ex;
+                }
+            }
+        }
+
 		public async Task<DocumentMetadata> GetDocumentMetadataAsync(MD5Sum id)
 		{
 			using (var connection = new NpgsqlConnection(connectionString))
@@ -192,7 +259,35 @@ namespace Server.Services
 					}
 				}
 			}
-		}
+        }
+
+        public async Task<Reader<DocumentMetadata>> GetDocumentMetadataAsync()
+        {
+            NpgsqlCommand command = null;
+            try
+            {
+                command = new NpgsqlCommand();
+                command.Connection = new NpgsqlConnection(connectionString);
+                await command.Connection.OpenAsync();
+                command.CommandText = "SELECT id,title,authorId,timestamp FROM document;";
+                var reader = await command.ExecuteReaderAsync();
+                return new Reader<DocumentMetadata>(
+                    new MetaDisposable(command, command.Connection),
+                    async () => await reader.ReadAsync(),
+                    () => new DocumentMetadata(
+                        new MD5Sum(reader.GetGuid(0).ToByteArray()),
+                        reader.GetString(1),
+                        reader.GetGuid(2),
+                        reader.GetDateTime(3))
+                );
+            }
+            catch(Exception ex)
+            {
+                command?.Connection?.Dispose();
+                command?.Dispose();
+                throw ex;
+            }
+        }
 
 		public async Task<string> GetDocumentBodyAsync(MD5Sum id, bool ignoreBlock = false)
 		{
@@ -230,36 +325,6 @@ namespace Server.Services
 							return reader.GetString(0);
 						}
 						throw new FileNotFoundException();
-					}
-				}
-			}
-		}
-
-		public async Task<DocumentBlock> GetDocumentBlockAsync(MD5Sum id)
-		{
-			using (var connection = new NpgsqlConnection(connectionString))
-			{
-				await connection.OpenAsync();
-
-				using (var cmd = new NpgsqlCommand())
-				{
-					cmd.Connection = connection;
-					cmd.CommandText = "SELECT isVoluntary,agentId,comment,timestamp FROM documentBlock WHERE id=@id;";
-					cmd.Parameters.AddWithValue("@id", id.ToGuid());
-
-					using (var reader = await cmd.ExecuteReaderAsync())
-					{
-						if (await reader.ReadAsync())
-						{
-							return new DocumentBlock(
-								id,
-								reader.GetBoolean(0),
-								reader.GetGuid(1),
-								reader.GetString(2),
-								reader.GetDateTime(3)
-							);
-						}
-						return null;
 					}
 				}
 			}
