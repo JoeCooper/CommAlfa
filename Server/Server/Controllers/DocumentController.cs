@@ -17,6 +17,7 @@ using System.Reflection;
 using System.IO;
 using Server.Utilities;
 using Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Server.Controllers
 {
@@ -37,11 +38,13 @@ namespace Server.Controllers
 
 		readonly IDatabaseService databaseService;
 		readonly InputConfiguration inputConfiguration;
+		readonly ILogger<DocumentController> logger;
 
-		public DocumentController(IDatabaseService databaseService, IOptions<InputConfiguration> _inputConfiguration)
+		public DocumentController(IDatabaseService databaseService, IOptions<InputConfiguration> _inputConfiguration, ILogger<DocumentController> logger)
 		{
 			this.databaseService = databaseService;
 			inputConfiguration = _inputConfiguration.Value;
+			this.logger = logger;
         }
 
         [HttpPost("{id}/edit")]
@@ -51,16 +54,19 @@ namespace Server.Controllers
             submissionModel.AntecedentIdBase64 = submissionModel.AntecedentIdBase64 ?? Enumerable.Empty<string>();
             
 			if(submissionModel.AntecedentIdBase64.Any() && !submissionModel.AntecedentIdBase64.Contains(id)) {
+				logger.LogWarning("Document rejected; The given id is a member of the given antecedents; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
 			}
 
             if (submissionModel.AntecedentIdBase64.Count() > 2)
-            {
+			{
+				logger.LogWarning("Document rejected; More than two antecedents; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
                 return BadRequest();
             }
 
 			if(submissionModel.AntecedentIdBase64.Any(_id => _id.FalsifyAsIdentifier()))
 			{
+				logger.LogWarning("Document rejected; Invalid antecents; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
 			}
 
@@ -71,10 +77,12 @@ namespace Server.Controllers
             submissionModel.Body = submissionModel.Body.Trim();
 
 			if(submissionModel.Title.Length > inputConfiguration.TitleLengthLimit) {
+				logger.LogWarning("Document rejected; Title too long; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return StatusCode(413);
 			}
 
 			if(submissionModel.Body.Length > inputConfiguration.BodyLengthLimit) {
+				logger.LogWarning("Document rejected; Body too long; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return StatusCode(413);
 			}
 
@@ -90,6 +98,8 @@ namespace Server.Controllers
 
 			var submissionId = await databaseService.AddDocumentAsync(authorId, submissionModel.Body, submissionModel.Title, antecedantIds);
 
+			logger.LogInformation("Document saved; Key: {1}; Origin: {0}", HttpContext.Connection.RemoteIpAddress, submissionId.ToString());
+
 			return RedirectToAction(nameof(GetDocument), new { id = submissionId.ToString() });
 		}
 
@@ -101,7 +111,10 @@ namespace Server.Controllers
 			if (id.Equals("new"))
 				return View("New", new DocumentViewModel(NewDocumentBody, string.Empty));
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			return View("Edit", new IdentifierViewModel(id));
 		}
 
@@ -110,7 +123,10 @@ namespace Server.Controllers
 		public IActionResult GetDocument(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			return View("Document", new IdentifierViewModel(id));
 		}
 
@@ -119,7 +135,10 @@ namespace Server.Controllers
 		public IActionResult GetHistory(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			return View("History", new IdentifierViewModel(id));
 		}
 
@@ -128,7 +147,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetDocumentForIndexing(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var idMD5 = new MD5Sum(idInBinary);
 			var metadata = await databaseService.GetDocumentMetadataAsync(idMD5);
