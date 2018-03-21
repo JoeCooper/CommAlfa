@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
+using Server.UnitTests.Fodder;
 
 namespace Server.UnitTests
 {

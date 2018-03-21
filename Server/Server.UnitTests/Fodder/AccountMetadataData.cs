@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Server.Models;
 
-namespace Server.UnitTests
+namespace Server.UnitTests.Fodder
 {
     public class AccountMetadataData : IEnumerable<object[]>
     {

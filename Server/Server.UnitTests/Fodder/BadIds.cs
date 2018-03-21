@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Server.UnitTests
+namespace Server.UnitTests.Fodder
 {
     public class BadIds: IEnumerable<object[]>
     {

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Server.UnitTests
+namespace Server.UnitTests.Fodder
 {
     public class Guids: IEnumerable<object[]>
     {
