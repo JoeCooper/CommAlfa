@@ -21,6 +21,7 @@ using System.Collections.Specialized;
 using System.Net.Http;
 using Server.Utilities;
 using Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Server.Controllers
 {
@@ -31,11 +32,13 @@ namespace Server.Controllers
 		const int PropertyLengthLimit = 1024;
 
         readonly IDatabaseService databaseService;
-        readonly RecaptchaConfiguration recaptchaConfiguration;
+		readonly RecaptchaConfiguration recaptchaConfiguration;
+		readonly ILogger<AccountController> logger;
 
-        public AccountController(IDatabaseService _databaseService, IOptions<RecaptchaConfiguration> _recaptchaConfiguration) {
+		public AccountController(IDatabaseService _databaseService, IOptions<RecaptchaConfiguration> _recaptchaConfiguration, ILogger<AccountController> logger) {
             databaseService = _databaseService;
-            recaptchaConfiguration = _recaptchaConfiguration.Value;
+			recaptchaConfiguration = _recaptchaConfiguration.Value;
+			this.logger = logger;
         }
 
         [HttpGet]
@@ -52,7 +55,10 @@ namespace Server.Controllers
         [HttpGet("{id}")]
 		public IActionResult GetAccount(string id) {
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			return View("Account", new IdentifierViewModel(id));
         }
 
@@ -69,13 +75,22 @@ namespace Server.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(string returnUrl, LoginSubmission submission) {
+		public async Task<IActionResult> Login(string returnUrl, LoginSubmission submission) {
 			if (submission == null)
+			{
+				logger.LogWarning("Login rejected; Reason: missing body; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			if (submission.Password.Length > PropertyLengthLimit)
+			{
+				logger.LogWarning("Login rejected; Reason: password violates property length limit; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			if (submission.Username.Length > PropertyLengthLimit)
+			{
+				logger.LogWarning("Login rejected; Reason: username violates property length limit; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			if (VetEmail(submission.Username) && VetPassword(submission.Password))
 			{
                 var account = await databaseService.GetAccountAsync(submission.Username);
@@ -116,7 +131,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> Register(RegistrationSubmission submission, string returnUrl)
 		{
 			if (submission == null)
+			{
+				logger.LogWarning("Registration rejected; Reason: missing body; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			{
 				//This is a hack. WebAPI cannot automatically deserialized the recaptcha response
 				//because its key has an unexpected form and it doesn't have any documented method
@@ -166,6 +184,7 @@ namespace Server.Controllers
                         submission.Username ?? string.Empty,
                         Password.GetPasswordDigest(submission.Password ?? string.Empty));
                     await databaseService.SaveAccountAsync(account, true);
+					logger.LogWarning("Registration accepted; Id: {0}; Origin: {1}", WebEncoders.Base64UrlEncode(account.Id.ToByteArray()), HttpContext.Connection.RemoteIpAddress);
                 }
                 catch(DuplicateKeyException)
                 {
