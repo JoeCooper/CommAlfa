@@ -10,6 +10,8 @@ namespace Server.Utilities
 		//This DFA is intended to cheaply falsify the claim that the given string is a UUID or MD5 sum encoded in Base64URL encoding.
 		//If it returns true, we are certain that the given string is _not_ a Base64 URL encoded UUID or MD5 sum.
 		public static bool FalsifyAsIdentifier(this string s) {
+			if (s == null)
+				return true;
 			//Both Guids and MD5 sums are 128 bits in length. 128 / 6 = 21 1/3, which must be rounded up to 22.
 			const int length = 22;
 			if(s.Length != length) {
