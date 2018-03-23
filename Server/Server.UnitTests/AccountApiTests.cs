@@ -11,6 +11,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using Server.UnitTests.Fodder;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Server.UnitTests
 {
@@ -21,8 +23,11 @@ namespace Server.UnitTests
         {
             var falseDatabaseService = new FalseDatabaseService();
             var draftAccount = new Account(Guid.NewGuid(), "Alfa", "alfa@bravo.com", Array.Empty<byte>());
-            await falseDatabaseService.SaveAccountAsync(draftAccount, true);
-            var accountApiController = new AccountApiController(falseDatabaseService);
+			await falseDatabaseService.SaveAccountAsync(draftAccount, true);
+			var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+			var factory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = factory.CreateLogger<AccountApiController>();
+			var accountApiController = new AccountApiController(falseDatabaseService, logger);
             var encodedId = WebEncoders.Base64UrlEncode(draftAccount.Id.ToByteArray());
             var result = (OkObjectResult) await accountApiController.GetAccountMetadata(encodedId);
             var resultBody = (AccountMetadata)result.Value;
@@ -36,8 +41,11 @@ namespace Server.UnitTests
         {
             var falseDatabaseService = new FalseDatabaseService();
             var draftAccount = new Account(Guid.NewGuid(), "Alfa", "alfa@bravo.com", Array.Empty<byte>());
-            await falseDatabaseService.SaveAccountAsync(draftAccount, true);
-            var accountApiController = new AccountApiController(falseDatabaseService);
+			await falseDatabaseService.SaveAccountAsync(draftAccount, true);
+			var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+			var factory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = factory.CreateLogger<AccountApiController>();
+			var accountApiController = new AccountApiController(falseDatabaseService, logger);
             var idWhichIsNotRepresentedInTheDatabase = WebEncoders.Base64UrlEncode(Guid.NewGuid().ToByteArray());
             try
             {
@@ -53,8 +61,11 @@ namespace Server.UnitTests
         [Theory(DisplayName = "Fetch account with bad ID")]
         [ClassData(typeof(BadIds))]
         public async Task TestFetchAccountFastFail(string id)
-        {
-            var accountApiController = new AccountApiController(new FalseDatabaseService());
+		{
+			var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+			var factory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = factory.CreateLogger<AccountApiController>();
+			var accountApiController = new AccountApiController(new FalseDatabaseService(), logger);
             var result = await accountApiController.GetAccountMetadata(id);
             Assert.True(result is BadRequestResult);
         }
@@ -74,8 +85,11 @@ namespace Server.UnitTests
             var decoyDocumentKeys = new[] {
                 await falseDatabaseService.AddDocumentAsync(decoyAccount.Id, "charlie", string.Empty, Enumerable.Empty<MD5Sum>()),
                 await falseDatabaseService.AddDocumentAsync(decoyAccount.Id, "delta", string.Empty, Enumerable.Empty<MD5Sum>())
-            };
-            var accountApiController = new AccountApiController(falseDatabaseService);
+			};
+			var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+			var factory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = factory.CreateLogger<AccountApiController>();
+			var accountApiController = new AccountApiController(falseDatabaseService, logger);
             var encodedId = WebEncoders.Base64UrlEncode(draftAccount.Id.ToByteArray());
             var result = (OkObjectResult)await accountApiController.GetAccountDocuments(encodedId);
             var resultBody = (IEnumerable<MD5Sum>)result.Value;
@@ -85,11 +99,14 @@ namespace Server.UnitTests
 
         [Fact(DisplayName = "Fetch documents for non-existent account")]
         public async Task TestFetchDocumentsForNonExistentAccount()
-        {
+		{
+			var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+			var factory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = factory.CreateLogger<AccountApiController>();
             var falseDatabaseService = new FalseDatabaseService();
             var draftAccount = new Account(Guid.NewGuid(), "Alfa", "alfa@bravo.com", Array.Empty<byte>());
             await falseDatabaseService.SaveAccountAsync(draftAccount, true);
-            var accountApiController = new AccountApiController(falseDatabaseService);
+			var accountApiController = new AccountApiController(falseDatabaseService, logger);
             var idWhichIsNotRepresentedInTheDatabase = WebEncoders.Base64UrlEncode(Guid.NewGuid().ToByteArray());
             var result = (OkObjectResult) await accountApiController.GetAccountDocuments(idWhichIsNotRepresentedInTheDatabase);
             var resultBody = (IEnumerable<MD5Sum>) result.Value;
@@ -99,8 +116,11 @@ namespace Server.UnitTests
         [Theory(DisplayName = "Fetch documents for account with bad id")]
         [ClassData(typeof(BadIds))]
         public async Task TestFetchDocumentsFastFail(string id)
-        {
-            var accountApiController = new AccountApiController(new FalseDatabaseService());
+		{
+			var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+			var factory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = factory.CreateLogger<AccountApiController>();
+            var accountApiController = new AccountApiController(new FalseDatabaseService(), logger);
             var result = await accountApiController.GetAccountMetadata(id);
             Assert.True(result is BadRequestResult);
         }

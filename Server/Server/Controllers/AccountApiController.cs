@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Server.Models;
@@ -15,10 +16,12 @@ namespace Server.Controllers
 	public class AccountApiController: Controller
 	{
 		readonly IDatabaseService databaseService;
+		readonly ILogger<AccountApiController> logger;
 
-		public AccountApiController(IDatabaseService databaseService)
+		public AccountApiController(IDatabaseService databaseService, ILogger<AccountApiController> logger)
 		{
 			this.databaseService = databaseService;
+			this.logger = logger;
 		}
 
 		[HttpGet("{id}/metadata")]
@@ -26,7 +29,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetAccountMetadata(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
 			var idBoxedInGuidForDatabase = new Guid(idInBinary);
 			var account = await databaseService.GetAccountAsync(idBoxedInGuidForDatabase);
@@ -39,7 +45,10 @@ namespace Server.Controllers
 		public async Task<IActionResult> GetAccountDocuments(string id)
 		{
 			if (id.FalsifyAsIdentifier())
+			{
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 				return BadRequest();
+			}
 			var guid = new Guid(WebEncoders.Base64UrlDecode(id));
 			var documentKeys = await databaseService.GetDocumentsForAccountAsync(guid);
 			return Ok(documentKeys);
