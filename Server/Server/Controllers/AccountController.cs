@@ -64,8 +64,14 @@ namespace Server.Controllers
 			var account = accountAsPulled;
 			if(submission.NewPassword != null)
 			{
+				if (submission.Password.Length > PropertyLengthLimit)
+				{
+					logger.LogWarning("Account save rejected; Reason: password violates property length limit; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+					return BadRequest();
+				}
 				if(Password.EvaluatePassword(submission.Password, accountAsPulled.PasswordDigest) == false)
 				{
+					logger.LogWarning("Account save rejected; Reason: current password is wrong; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
 					failureBuilder.Add(AccountEditFailureReasons.PasswordIsWrong);
 				}
 				if(VetPassword(submission.NewPassword))
