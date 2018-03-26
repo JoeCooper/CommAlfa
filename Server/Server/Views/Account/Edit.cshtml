@@ -1,0 +1,129 @@
+﻿@model Server.ViewModels.AccountEditViewModel
+@using Server.Utilities;
+@using System.Linq;
+@{
+	var replacementCode = Guid.NewGuid().ToString();
+	var archetypicalDocumentLink = Url.Action("GetDocument","Document",new {id=replacementCode});
+}
+<div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
+<div id='scaffolding' hidden='true'>
+	<table class="title"><tr>
+	    <td>
+	        <h1 id='authorDisplayName'></h1>
+	        <div><a asp-area="" asp-controller="Account" asp-action="Logout">Sign out</a></div>
+	    </td>
+	    <td><img id='authorAvatar' class="avatar" /></td>
+	</tr></table>
+	<h2>Edit</h2>
+	<div>
+		<form name='Edit' method="post" onsubmit="return validateForm()">
+	        <p>@Html.EditorFor(m => m.DisplayName, new { htmlAttributes = new { placeholder = "Your name as it will appear" } })</p>
+			@if(Model.Reasons.Contains(AccountEditFailureReasons.DisplayNameIsBlank)) {
+	            <p class='error'>Please enter a non-empty display name.</p>
+	        }
+			<p><input type='password' name='Password' placeholder='Current Password' /></p>
+	        @if(Model.Reasons.Contains(AccountEditFailureReasons.PasswordIsWrong)) {
+	            <p class='error'>Your password is incorrect.</p>
+	        }
+            <p hidden='true' id='missingPasswordError' class='error'>Yo change your password, you must enter your current password.</p>
+			<p><input type='password' name='NewPassword' placeholder='Password' /></p>
+	        @if(Model.Reasons.Contains(AccountEditFailureReasons.PasswordIsInadequate)) {
+	            <p class='error'>Password must be at least six characters in length.</p>
+	        }
+			<p><input type='password' name='RepeatPassword' placeholder='Repeat Password' /></p>
+            <p hidden='true' id='repeatPasswordError' class='error'>Passwords must match.</p>
+	        <p><input type="submit" value="Save" /></p>
+		</form>
+	</div>
+	<h2>Documents</h2>
+	<table id='documents' class="table">
+	    <tr>
+	        <th>Title</th>
+	        <th>Timestamp</th>
+	        <th></th>
+	    </tr>
+	    <tr>
+	        <td></td>
+	        <td></td>
+	        <td><a asp-area="" asp-controller="Document" asp-action="Edit" asp-route-id="new">New</a></td>
+	    </tr>
+	</table>
+</div>
+@section Scripts {
+<script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
+<script>
+function validateForm() {
+	var missingPasswordError = $('#missingPasswordError');
+	var repeatPasswordError = $('#repeatPasswordError');
+	missingPasswordError.hide();
+	repeatPasswordError.hide();
+    var givenPassword = document.forms["Edit"]["NewPassword"].value;
+    if (givenPassword.length > 0) {
+	    var currentPassword = document.forms["Edit"]["Password"].value;
+		if(currentPassword = "") {
+			missingPasswordError.show();
+	        return false;
+		}
+	    var repeatPassword = document.forms["Edit"]["RepeatPassword"].value;
+        if(repeatPassword != givenPassword) {
+			repeatPasswordError.show();
+	        return false;
+		}
+    }
+}
+var allDocumentKeys = []
+function prerequisiteLoadStart() {
+	mainPageLoad.push();
+}
+function prerequisiteLoadComplete() {
+	mainPageLoad.pop();
+}
+const prerequisiteLoadManager = new LoadManager(prerequisiteLoadStart, prerequisiteLoadComplete);
+const gravatarRoot = '@Gravatar.Root';
+function consumeAuthorMetadata(data) {
+	$('#authorDisplayName').html(escapeHtml(data.displayName));
+	$('#authorAvatar').attr('src', gravatarRoot + data.gravatarHash);
+	mainPageLoad.pop();
+}
+function consumeDocumentMetadata(data) {
+	var table = $('#documents');
+	var row = $('<tr>');
+	var titleColumn = $('<td>', { html: marked(escapeHtml(data.title)) });
+	var timestampColumn = $('<td>', { html: data.timestamp });
+	var linkColumn = $('<td>');
+	var url = '@archetypicalDocumentLink'.replace('@replacementCode',data.id);
+	var link = $('<a>', { html: 'View', href: url })
+	linkColumn.append(link);
+	row.append(titleColumn);
+	row.append(timestampColumn);
+	row.append(linkColumn);
+	table.append(row);
+	prerequisiteLoadManager.pop();
+}
+function consumeDescendants(primaryId, data) {
+	return function(data) {
+		var isSuperceded = false;
+		data.forEach(function(id) {
+			isSuperceded = isSuperceded || allDocumentKeys.includes(id);
+		});
+		if(isSuperceded == false) {
+			prerequisiteLoadManager.push();
+			$.getJSON('/api/documents/' + primaryId + '/metadata', consumeDocumentMetadata);
+		}
+		prerequisiteLoadManager.pop();
+	}
+}
+function consumeDocumentKeys(data) {
+	allDocumentKeys = data;
+	allDocumentKeys.forEach(function(key) {
+		prerequisiteLoadManager.push();
+		$.getJSON('/api/documents/' + key + '/descendants', consumeDescendants(key));
+	});
+	prerequisiteLoadManager.pop();
+}
+mainPageLoad.push();
+$.getJSON('/api/accounts/@(Model.Id)/metadata', consumeAuthorMetadata);
+prerequisiteLoadManager.push();
+$.getJSON('/api/accounts/@(Model.Id)/documents', consumeDocumentKeys);
+</script>
+}

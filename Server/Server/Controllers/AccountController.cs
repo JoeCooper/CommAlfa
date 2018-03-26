@@ -49,11 +49,55 @@ namespace Server.Controllers
 			var stringified = WebEncoders.Base64UrlEncode(id.ToByteArray());
 			if (stringified.FalsifyAsIdentifier())
 				return BadRequest();
-			return GetAccount(stringified);
+			return View("Edit", new AccountEditViewModel(stringified));
         }
 
+		[HttpPost]
+		[Authorize]
+		public async Task<IActionResult> SaveAccount(AccountMetadataSubmission submission)
+		{
+			var nameIdentifierClaim = User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
+			var authenticatedId = Guid.Parse(nameIdentifierClaim.Value);
+			var stringified = WebEncoders.Base64UrlEncode(authenticatedId.ToByteArray());
+			var failureBuilder = ImmutableArray.CreateBuilder<AccountEditFailureReasons>();
+			var accountAsPulled = await databaseService.GetAccountAsync(authenticatedId);
+			var account = accountAsPulled;
+			if(submission.NewPassword != null)
+			{
+				if(Password.EvaluatePassword(submission.Password, accountAsPulled.PasswordDigest) == false)
+				{
+					failureBuilder.Add(AccountEditFailureReasons.PasswordIsWrong);
+				}
+				if(VetPassword(submission.NewPassword))
+				{
+					account = account.WithPasswordDigest(Password.GetPasswordDigest(submission.NewPassword));
+				}
+				else
+				{
+					failureBuilder.Add(AccountEditFailureReasons.PasswordIsInadequate);						
+				}
+			}
+			if(submission.DisplayName != null)
+			{
+				if(VetDisplayName(submission.DisplayName))
+				{
+					account = account.WithDisplayName(submission.DisplayName);
+				}
+				else
+				{
+					failureBuilder.Add(AccountEditFailureReasons.DisplayNameIsBlank);
+				}
+			}
+			if(account != accountAsPulled && !failureBuilder.Any())
+			{
+				await databaseService.SaveAccountAsync(account, false);
+			}
+			return View("Edit", new AccountEditViewModel(submission.DisplayName ?? String.Empty, failureBuilder, stringified));
+		}
+
         [HttpGet("{id}")]
-		public IActionResult GetAccount(string id) {
+		public IActionResult GetAccount(string id)
+		{
 			if (id.FalsifyAsIdentifier())
 			{
 				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);

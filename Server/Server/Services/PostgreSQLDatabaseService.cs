@@ -163,14 +163,16 @@ namespace Server.Services
 				using (var cmd = new NpgsqlCommand())
 				{
 					cmd.Connection = connection;
-					cmd.CommandText = "SELECT displayName, email FROM account WHERE id=@id;";
+					cmd.CommandText = "SELECT displayName, email, password_digest FROM account WHERE id=@id;";
 					cmd.Parameters.AddWithValue("@id", id);
 
 					using (var reader = await cmd.ExecuteReaderAsync())
 					{
 						if (await reader.ReadAsync())
 						{
-							return new Account(id, reader.GetString(0), reader.GetString(1));
+							var extantDigest = new byte[Password.DigestLength];
+							reader.GetBytes(2, 0, extantDigest, 0, extantDigest.Length);
+							return new Account(id, reader.GetString(0), reader.GetString(1), extantDigest);
 						}
 						throw new FileNotFoundException();
 					}
