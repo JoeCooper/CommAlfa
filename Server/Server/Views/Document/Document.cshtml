@@ -27,7 +27,7 @@ function consumeDocumentMetadata(data) {
 	$('#title').html(marked(escapeHtml(data.title)));
 	$('#timestamp').html(escapeHtml(data.timestamp));
     loadPush();
-	$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata).always(function() { loadPop(); });
+	$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata).fail(failureHandler).always(function() { loadPop(); });
 }
 loadPush();
 loadPush();
