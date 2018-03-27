@@ -1,5 +1,6 @@
 ﻿@model Server.ViewModels.IdentifierViewModel
 <div id='busyIndicator'>@Html.Partial("~/Views/Shared/Spinner.cshtml")</div>
+<div id='errorView' class='isa_error' hidden='true'>ergerge</div>
 <div id='scaffolding' hidden='true'>
 	<table class="title"><tr>
 	    <td><h1 id='title'></h1></td>
@@ -11,29 +12,26 @@
 	    </td></tr>
 	</table>
 	<hr />
-	<div id='documentBody' />
+	<div id='documentBody'></div>
 </div>
 @section Scripts {
 <script src='https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.17/marked.min.js'></script>
 <script>
 function consumeDocumentBody(data) {
 	$('#documentBody').html(marked(escapeHtml(data)));
-    loadPop();
 }
 function consumeAuthorMetadata(data) {
 	$('#authorDisplayName').html(escapeHtml(data.displayName));
-    loadPop();
 }
 function consumeDocumentMetadata(data) {
 	$('#title').html(marked(escapeHtml(data.title)));
 	$('#timestamp').html(escapeHtml(data.timestamp));
     loadPush();
-	$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata);
-    loadPop();
+	$.getJSON('/api/accounts/' + data.authorId + '/metadata', consumeAuthorMetadata).always(function() { loadPop(); });
 }
 loadPush();
 loadPush();
-$.get('/api/documents/@(Model.Id)', consumeDocumentBody);
-$.getJSON('/api/documents/@(Model.Id)/metadata', consumeDocumentMetadata);
+$.get('/api/documents/@(Model.Id)', consumeDocumentBody).fail(failureHandler).always(function() { loadPop(); });
+$.getJSON('/api/documents/@(Model.Id)/metadata', consumeDocumentMetadata).fail(failureHandler).always(function() { loadPop(); });
 </script>
 }

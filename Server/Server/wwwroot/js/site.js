@@ -1,4 +1,24 @@
-﻿Array.prototype.firstOrDefault = function(func){
+﻿var errorDescription = null;
+function failureHandler(jqXHR, textStatus, errorThrown)
+{
+	if(jqXHR.status == 404)
+	{
+		errorDescription = '<p><strong>Error 404</strong> Not Found.</p>';
+	}
+	else if(jqXHR.status == 410)
+	{
+		errorDescription = '<p><strong>Error 410</strong> Gone</p><p>This document has been removed voluntarily by moderators.</p>';
+	}
+	else if(jqXHR.status == 451)
+	{
+		errorDescription = '<p><strong>Error 451</strong> Unavailable For Legal Reasons</p><p>This document has been removed <strong>involuntarily</strong> by moderators.</p>';
+	}
+	else
+	{
+		errorDescription = '<p><strong>Error ' + jqXHR.status + '</strong> ' + jqXHR.statusText + '</p>';
+	}
+}
+Array.prototype.firstOrDefault = function(func){
     return this.filter(func)[0] || null;
 };
 class LoadManager {
@@ -27,7 +47,16 @@ const mainPageLoad = new LoadManager(
 	},
 	function () {
         $("#busyIndicator").hide();
-        $("#scaffolding").show();
+        if(errorDescription == null)
+        {
+	        $("#scaffolding").show();
+        }
+        else
+        {
+	        var view = $('#errorView');
+			view.show();
+			view.html(errorDescription);
+        }
 	});
 function loadPush() {
 	mainPageLoad.push();
