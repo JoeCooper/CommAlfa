@@ -19,19 +19,19 @@
 		<form name='Edit' method="post" onsubmit="return validateForm()">
 	        <p>@Html.EditorFor(m => m.DisplayName, new { htmlAttributes = new { placeholder = "Your name as it will appear" } })</p>
 			@if(Model.Reasons.Contains(AccountEditFailureReasons.DisplayNameIsBlank)) {
-	            <p class='error'>Please enter a non-empty display name.</p>
+	            <p class='isa_error'>Please enter a non-empty display name.</p>
 	        }
 			<p><input type='password' name='Password' placeholder='Current Password' /></p>
 	        @if(Model.Reasons.Contains(AccountEditFailureReasons.PasswordIsWrong)) {
-	            <p class='error'>Your password is incorrect.</p>
+	            <p class='isa_error'>Your password is incorrect.</p>
 	        }
-            <p hidden='true' id='missingPasswordError' class='error'>Yo change your password, you must enter your current password.</p>
+            <p hidden='true' id='missingPasswordError' class='isa_error'>Yo change your password, you must enter your current password.</p>
 			<p><input type='password' name='NewPassword' placeholder='Password' /></p>
 	        @if(Model.Reasons.Contains(AccountEditFailureReasons.PasswordIsInadequate)) {
-	            <p class='error'>Password must be at least six characters in length.</p>
+	            <p class='isa_error'>Password must be at least six characters in length.</p>
 	        }
 			<p><input type='password' name='RepeatPassword' placeholder='Repeat Password' /></p>
-            <p hidden='true' id='repeatPasswordError' class='error'>Passwords must match.</p>
+            <p hidden='true' id='repeatPasswordError' class='isa_error'>Passwords must match.</p>
 	        <p><input type="submit" value="Save" /></p>
 		</form>
 	</div>
