@@ -35,7 +35,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
@@ -50,7 +50,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
@@ -65,7 +65,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
@@ -80,7 +80,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);

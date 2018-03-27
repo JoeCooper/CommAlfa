@@ -54,19 +54,19 @@ namespace Server.Controllers
             submissionModel.AntecedentIdBase64 = submissionModel.AntecedentIdBase64 ?? Enumerable.Empty<string>();
             
 			if(submissionModel.AntecedentIdBase64.Any() && !submissionModel.AntecedentIdBase64.Contains(id)) {
-				logger.LogWarning("Document rejected; The given id is a member of the given antecedents; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document rejected; The given id is a member of the given antecedents; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 
             if (submissionModel.AntecedentIdBase64.Count() > 2)
 			{
-				logger.LogWarning("Document rejected; More than two antecedents; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document rejected; More than two antecedents; Origin: {0}", HttpContext.GetRemoteAddress());
                 return BadRequest();
             }
 
 			if(submissionModel.AntecedentIdBase64.Any(_id => _id.FalsifyAsIdentifier()))
 			{
-				logger.LogWarning("Document rejected; Invalid antecents; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document rejected; Invalid antecents; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 
@@ -77,12 +77,12 @@ namespace Server.Controllers
             submissionModel.Body = submissionModel.Body.Trim();
 
 			if(submissionModel.Title.Length > inputConfiguration.TitleLengthLimit) {
-				logger.LogWarning("Document rejected; Title too long; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document rejected; Title too long; Origin: {0}", HttpContext.GetRemoteAddress());
 				return StatusCode(413);
 			}
 
 			if(submissionModel.Body.Length > inputConfiguration.BodyLengthLimit) {
-				logger.LogWarning("Document rejected; Body too long; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document rejected; Body too long; Origin: {0}", HttpContext.GetRemoteAddress());
 				return StatusCode(413);
 			}
 
@@ -98,7 +98,7 @@ namespace Server.Controllers
 
 			var submissionId = await databaseService.AddDocumentAsync(authorId, submissionModel.Body, submissionModel.Title, antecedantIds);
 
-			logger.LogInformation("Document saved; Key: {1}; Origin: {0}", HttpContext.Connection.RemoteIpAddress, submissionId.ToString());
+			logger.LogInformation("Document saved; Key: {1}; Origin: {0}", HttpContext.GetRemoteAddress(), submissionId.ToString());
 
 			return RedirectToAction(nameof(GetDocument), new { id = submissionId.ToString() });
 		}
@@ -112,7 +112,7 @@ namespace Server.Controllers
 				return View("New", new DocumentViewModel(NewDocumentBody, string.Empty));
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			return View("Edit", new IdentifierViewModel(id));
@@ -124,7 +124,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			return View("Document", new IdentifierViewModel(id));
@@ -136,7 +136,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			return View("History", new IdentifierViewModel(id));
@@ -148,7 +148,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Document id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);

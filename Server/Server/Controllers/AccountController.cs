@@ -66,12 +66,12 @@ namespace Server.Controllers
 			{
 				if (submission.Password.Length > PropertyLengthLimit)
 				{
-					logger.LogWarning("Account save rejected; Reason: password violates property length limit; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+					logger.LogWarning("Account save rejected; Reason: password violates property length limit; Origin: {0}", HttpContext.GetRemoteAddress());
 					return BadRequest();
 				}
 				if(Password.EvaluatePassword(submission.Password, accountAsPulled.PasswordDigest) == false)
 				{
-					logger.LogWarning("Account save rejected; Reason: current password is wrong; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+					logger.LogWarning("Account save rejected; Reason: current password is wrong; Origin: {0}", HttpContext.GetRemoteAddress());
 					failureBuilder.Add(AccountEditFailureReasons.PasswordIsWrong);
 				}
 				if(VetPassword(submission.NewPassword))
@@ -106,7 +106,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			return View("Account", new IdentifierViewModel(id));
@@ -128,17 +128,17 @@ namespace Server.Controllers
 		public async Task<IActionResult> Login(string returnUrl, LoginSubmission submission) {
 			if (submission == null)
 			{
-				logger.LogWarning("Login rejected; Reason: missing body; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Login rejected; Reason: missing body; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			if (submission.Password.Length > PropertyLengthLimit)
 			{
-				logger.LogWarning("Login rejected; Reason: password violates property length limit; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Login rejected; Reason: password violates property length limit; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			if (submission.Username.Length > PropertyLengthLimit)
 			{
-				logger.LogWarning("Login rejected; Reason: username violates property length limit; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Login rejected; Reason: username violates property length limit; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			if (VetEmail(submission.Username) && VetPassword(submission.Password))
@@ -182,7 +182,7 @@ namespace Server.Controllers
 		{
 			if (submission == null)
 			{
-				logger.LogWarning("Registration rejected; Reason: missing body; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Registration rejected; Reason: missing body; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			{
@@ -234,7 +234,7 @@ namespace Server.Controllers
                         submission.Username ?? string.Empty,
                         Password.GetPasswordDigest(submission.Password ?? string.Empty));
                     await databaseService.SaveAccountAsync(account, true);
-					logger.LogWarning("Registration accepted; Id: {0}; Origin: {1}", WebEncoders.Base64UrlEncode(account.Id.ToByteArray()), HttpContext.Connection.RemoteIpAddress);
+					logger.LogWarning("Registration accepted; Id: {0}; Origin: {1}", WebEncoders.Base64UrlEncode(account.Id.ToByteArray()), HttpContext.GetRemoteAddress());
                 }
                 catch(DuplicateKeyException)
                 {

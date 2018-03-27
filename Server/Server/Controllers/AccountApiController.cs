@@ -30,7 +30,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var idInBinary = WebEncoders.Base64UrlDecode(id);
@@ -46,7 +46,7 @@ namespace Server.Controllers
 		{
 			if (id.FalsifyAsIdentifier())
 			{
-				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.Connection.RemoteIpAddress);
+				logger.LogWarning("Account id rejected; Origin: {0}", HttpContext.GetRemoteAddress());
 				return BadRequest();
 			}
 			var guid = new Guid(WebEncoders.Base64UrlDecode(id));
